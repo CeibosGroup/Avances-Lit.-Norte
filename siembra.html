@@ -91,7 +91,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const XLSX_URL = 'data/avance.xlsx';
+const XLSX_URL = 'avance.xlsx';
 
 // Avance de siembra cols (0-based):
 // A=Campo B=LoteCeres C=ha D=Cult E=haSembradas F=SinSembrar G=%Avance H=FSiembra I=Sist J=Variedad
@@ -275,7 +275,7 @@ fetch(XLSX_URL + '?t=' + Date.now())
   .catch(err => {
     document.getElementById('loading').style.display = 'none';
     const eb = document.getElementById('error-box');
-    eb.textContent = '⚠ ' + err.message + '. Verificá que data/avance.xlsx esté en el repositorio.';
+    eb.textContent = '⚠ ' + err.message + '. Verificá que avance.xlsx esté en el repositorio.';
     eb.style.display = 'block';
   });
 </script>

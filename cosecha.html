@@ -102,7 +102,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const XLSX_URL = 'data/avance.xlsx';
+const XLSX_URL = 'avance.xlsx';
 
 // ── Sheet column indices (0-based) ──
 // Avance cosecha: A=Campo B=Lote C=ha D=CultInv E=CultVerano F=CultivoVerano
@@ -318,7 +318,7 @@ fetch(XLSX_URL + '?t=' + Date.now())
   .catch(err => {
     document.getElementById('loading').style.display = 'none';
     const eb = document.getElementById('error-box');
-    eb.textContent = '⚠ ' + err.message + '. Verificá que data/avance.xlsx esté en el repositorio.';
+    eb.textContent = '⚠ ' + err.message + '. Verificá que avance.xlsx esté en el repositorio.';
     eb.style.display = 'block';
   });
 </script>
