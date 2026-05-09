@@ -10,137 +10,76 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #f0efe9;
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
   }
-  .container {
-    text-align: center;
-    padding: 2rem;
-    max-width: 480px;
-    width: 100%;
-  }
+  .container { width: 100%; max-width: 420px; text-align: center; }
   .logo {
-    width: 56px; height: 56px;
-    background: #2E5C1E;
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.5rem;
-    font-size: 28px;
+    width: 64px; height: 64px; background: #2E5C1E;
+    border-radius: 18px; display: flex; align-items: center;
+    justify-content: center; margin: 0 auto 20px; font-size: 32px;
   }
-  h1 {
-    font-size: 22px;
-    font-weight: 500;
-    color: #1a1a1a;
-    margin-bottom: 6px;
+  h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .org { font-size: 13px; color: #6b6b6b; margin-bottom: 28px; }
+  .update-box {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; border: 0.5px solid rgba(0,0,0,0.12);
+    border-radius: 20px; padding: 6px 14px;
+    font-size: 12px; color: #6b6b6b; margin-bottom: 28px;
   }
-  .subtitle {
-    font-size: 14px;
-    color: #6b6b6b;
-    margin-bottom: 2.5rem;
-  }
-  .week-badge {
-    display: inline-block;
-    background: #fff;
-    border: 0.5px solid rgba(0,0,0,0.12);
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-size: 12px;
-    color: #6b6b6b;
-    margin-bottom: 2rem;
-  }
-  .btn-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #2E5C1E; flex-shrink: 0; }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 1.5rem 1rem;
-    background: #fff;
-    border: 0.5px solid rgba(0,0,0,0.12);
-    border-radius: 14px;
-    text-decoration: none;
-    color: #1a1a1a;
-    transition: box-shadow 0.15s, transform 0.15s;
-    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 12px; padding: 20px 12px; background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.1); border-radius: 16px;
+    text-decoration: none; color: #1a1a1a;
+    -webkit-tap-highlight-color: transparent;
   }
-  .btn:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-  }
-  .btn:active { transform: scale(0.98); }
+  .btn:active { opacity: 0.8; }
   .btn-icon {
-    width: 44px; height: 44px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
   }
-  .btn-icon.harvest { background: #DDEEFF; }
-  .btn-icon.sowing  { background: #E2EFDA; }
-  .btn-label {
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .btn-sub {
-    font-size: 11px;
-    color: #6b6b6b;
-  }
-  .footer {
-    margin-top: 2rem;
-    font-size: 11px;
-    color: #aaa;
-  }
+  .harvest { background: #DDEEFF; }
+  .sowing  { background: #E2EFDA; }
+  .btn-label { font-size: 15px; font-weight: 500; }
+  .btn-sub   { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .pulsing { animation: pulse 1.5s infinite; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="logo">🌿</div>
   <h1>Avance Litoral Norte</h1>
-  <p class="subtitle">Ceibos Group Uruguay · Campaña 2025/26</p>
-  <div class="week-badge" id="week-label">Cargando...</div>
-
+  <p class="org">Ceibos Group · Campaña 2025/26</p>
+  <div class="update-box">
+    <div class="dot" id="dot"></div>
+    <span id="lbl" class="pulsing">Cargando...</span>
+  </div>
   <div class="btn-grid">
     <a href="cosecha.html" class="btn">
       <div class="btn-icon harvest">🌾</div>
-      <div>
-        <div class="btn-label">Cosecha</div>
-        <div class="btn-sub">Soja 1ra y 2da</div>
-      </div>
+      <div><div class="btn-label">Cosecha</div><div class="btn-sub">Soja 1ra y 2da</div></div>
     </a>
     <a href="siembra.html" class="btn">
       <div class="btn-icon sowing">🌱</div>
-      <div>
-        <div class="btn-label">Siembra</div>
-        <div class="btn-sub">Invierno 2026</div>
-      </div>
+      <div><div class="btn-label">Siembra</div><div class="btn-sub">Invierno 2026</div></div>
     </a>
   </div>
-
-  <div class="footer" id="footer-date"></div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const XLSX_URL = 'avance.xlsx';
-
-fetch(XLSX_URL + '?t=' + Date.now())
-  .then(r => r.arrayBuffer())
-  .then(buf => {
-    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
-    // Get last modified date from first sheet cell or use today
-    const today = new Date();
-    const semana = 'Semana ' + today.toLocaleDateString('es-UY', { day:'2-digit', month:'2-digit', year:'numeric' });
-    document.getElementById('week-label').textContent = semana;
-    document.getElementById('footer-date').textContent = 'Datos actualizados: ' + today.toLocaleDateString('es-UY', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  })
-  .catch(() => {
-    document.getElementById('week-label').textContent = 'Campaña 2025/26';
-  });
+fetch('avance.xlsx?t='+Date.now()).then(r=>r.arrayBuffer()).then(()=>{
+  const d = new Date();
+  document.getElementById('lbl').textContent = 'Actualizado ' + d.toLocaleDateString('es-UY',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('lbl').classList.remove('pulsing');
+}).catch(()=>{
+  document.getElementById('lbl').textContent = 'Campaña 2025/26';
+  document.getElementById('dot').style.background='#aaa';
+  document.getElementById('lbl').classList.remove('pulsing');
+});
 </script>
 </body>
 </html>

@@ -7,84 +7,91 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0efe9; color: #1a1a1a; }
-
   .topbar {
     background: #2E5C1E; color: #fff;
-    padding: 12px 20px;
-    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
     position: sticky; top: 0; z-index: 10;
   }
-  .topbar a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px; }
-  .topbar a:hover { color: #fff; }
-  .topbar h1 { font-size: 15px; font-weight: 500; flex: 1; }
-  .topbar .week { font-size: 12px; opacity: 0.75; }
+  .topbar a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; padding: 4px 0; }
+  .topbar h1 { font-size: 16px; font-weight: 500; flex: 1; }
+  .topbar .week { font-size: 11px; opacity: 0.7; }
+  .wrapper { padding: 12px; max-width: 680px; margin: 0 auto; }
 
-  .wrapper { max-width: 780px; margin: 0 auto; padding: 16px; }
-
-  .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
-  .kpi { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 10px 14px; }
+  /* KPIs 2x2 */
+  .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .kpi { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 10px 12px; }
   .kpi-label { font-size: 11px; color: #6b6b6b; margin-bottom: 2px; }
   .kpi-val { font-size: 20px; font-weight: 500; }
   .kpi-sub { font-size: 11px; color: #6b6b6b; margin-top: 2px; }
 
-  .card { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
-
-  .cult-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 16px; cursor: pointer; user-select: none;
+  /* Donut card */
+  .donut-card {
+    background: #fff; border: 0.5px solid rgba(0,0,0,0.1);
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 12px;
   }
-  .cult-row:hover { background: #f8f8f5; }
+  .donut-wrap { flex-shrink: 0; }
+  .donut-legend { flex: 1; }
+  .leg-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .leg-item:last-child { margin-bottom: 0; }
+  .leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .leg-name { flex: 1; color: #1a1a1a; }
+  .leg-val { color: #6b6b6b; font-size: 12px; }
 
-  .pill { font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+  /* Cult blocks */
+  .card { background: #fff; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .cult-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cult-row:active { background: #f5f5f2; }
+  .pill { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
   .pill-cz  { background: #E2EFDA; color: #2E5C1E; }
   .pill-tr  { background: #DDEEFF; color: #1F4E79; }
   .pill-ceb { background: #FCE4D6; color: #843C0C; }
-
   .bar-track { flex: 1; height: 10px; background: #e8e8e4; border-radius: 3px; overflow: hidden; display: flex; }
-  .bar-fill  { height: 100%; border-radius: 3px; }
-  .bar-ok-cz  { background: #2E5C1E; }
-  .bar-ok-tr  { background: #2E75B6; }
-  .bar-ok-ceb { background: #ED7D31; }
+  .bar-fill  { height: 100%; }
+  .bar-ok-cz  { background: #2E5C1E; border-radius: 3px; }
+  .bar-ok-tr  { background: #2E75B6; border-radius: 3px; }
+  .bar-ok-ceb { background: #ED7D31; border-radius: 3px; }
   .bar-risk   { background: #C00000; opacity: 0.75; }
-
-  .cult-pct { font-size: 14px; font-weight: 500; white-space: nowrap; }
-  .cult-meta { font-size: 12px; color: #6b6b6b; white-space: nowrap; }
-  .chev { font-size: 11px; color: #999; transition: transform 0.2s; flex-shrink: 0; }
+  .cult-pct { font-size: 15px; font-weight: 500; white-space: nowrap; }
+  .chev { font-size: 12px; color: #aaa; transition: transform 0.2s; flex-shrink: 0; }
   .chev.open { transform: rotate(90deg); }
+  .cult-meta { font-size: 11px; color: #6b6b6b; padding: 0 14px 10px; margin-top: -4px; }
 
-  .campo-list { display: none; padding: 0 16px 10px; border-top: 0.5px solid rgba(0,0,0,0.07); background: #fafaf8; }
+  .campo-list { display: none; border-top: 0.5px solid rgba(0,0,0,0.07); background: #fafaf8; padding: 6px 10px 10px; }
   .campo-list.open { display: block; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; margin-top: 8px; }
-  th { text-align: left; font-size: 11px; font-weight: 500; color: #6b6b6b; padding: 4px; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; font-size: 10px; font-weight: 500; color: #6b6b6b; padding: 4px 3px; border-bottom: 0.5px solid rgba(0,0,0,0.1); }
   th.r { text-align: right; }
-  td { padding: 4px; border-bottom: 0.5px solid rgba(0,0,0,0.06); vertical-align: middle; }
+  td { padding: 5px 3px; border-bottom: 0.5px solid rgba(0,0,0,0.06); vertical-align: middle; }
   td.r { text-align: right; }
   tr:last-child td { border-bottom: none; }
-  .lmini { width: 60px; height: 6px; background: #e8e8e4; border-radius: 2px; overflow: hidden; display: inline-flex; vertical-align: middle; margin-right: 4px; }
+  .lmini { width: 44px; height: 5px; background: #e8e8e4; border-radius: 2px; overflow: hidden; display: inline-flex; vertical-align: middle; margin-right: 3px; }
   .lmini-inner { height: 100%; }
-
   .risk-badge { font-size: 10px; background: #FFEAEA; color: #C00000; border-radius: 4px; padding: 1px 5px; font-weight: 500; margin-left: 4px; }
-  .muted { color: #999; font-style: italic; }
   .neg { color: #C00000; }
-
-  .loading { text-align: center; padding: 3rem; color: #6b6b6b; font-size: 14px; }
-  .error { background: #fff0f0; border: 0.5px solid #f0c0c0; border-radius: 10px; padding: 1rem; color: #C00000; font-size: 13px; margin-bottom: 14px; }
+  .muted { color: #999; font-style: italic; }
+  .loading { text-align: center; padding: 3rem 1rem; color: #6b6b6b; font-size: 14px; }
+  .error { background: #fff0f0; border: 0.5px solid #f0c0c0; border-radius: 10px; padding: 1rem; color: #C00000; font-size: 13px; margin-bottom: 12px; }
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <a href="index.html">← Inicio</a>
+  <a href="index.html">←</a>
   <h1>Siembra Invierno 2026</h1>
   <span class="week" id="week-label"></span>
 </div>
-
 <div class="wrapper">
   <div id="error-box" class="error" style="display:none"></div>
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
     <div class="kpi-row" id="kpis"></div>
+    <div class="donut-card" id="donut-card"></div>
     <div id="blocks"></div>
   </div>
 </div>
@@ -92,191 +99,193 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const XLSX_URL = 'avance.xlsx';
+const SC = { campo:0, lote:1, ha:2, cult:3, sembradas:4, fsiem:7, variedad:9 };
 
-// Avance de siembra cols (0-based):
-// A=Campo B=LoteCeres C=ha D=Cult E=haSembradas F=SinSembrar G=%Avance H=FSiembra I=Sist J=Variedad
-const SC = { campo:0, lote:1, ha:2, cult:3, sembradas:4, fsiem:7, sist:8, variedad:9 };
-
-// Resiembra: detectar por comentario o flag — usamos un campo especial en col K (índice 10) si existe
-// Por ahora lo manejamos como dato estático configurable abajo
+// Resiembra: 'Campo|Lote|Cult' → ha en riesgo
 const RESIEMBRA = {
-  'San Luis|1|Cz': 138.88  // campo|lote|cult → ha en riesgo
+  'San Luis|1|Cz': 138.88
 };
-
-function fmt(n, dec=0) {
-  if (n == null || n === '' || isNaN(n)) return '—';
-  return Number(n).toLocaleString('es-UY', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
 
 const CULT_CFG = {
-  'Cz':  { label: 'Colza',  pillClass: 'pill-cz',  barOk: 'bar-ok-cz'  },
-  'Tr':  { label: 'Trigo',  pillClass: 'pill-tr',  barOk: 'bar-ok-tr'  },
-  'Ceb': { label: 'Cebada', pillClass: 'pill-ceb', barOk: 'bar-ok-ceb' },
+  'Cz':  { label:'Colza',  pill:'pill-cz',  barOk:'bar-ok-cz',  color:'#2E5C1E' },
+  'Tr':  { label:'Trigo',  pill:'pill-tr',  barOk:'bar-ok-tr',  color:'#2E75B6' },
+  'Ceb': { label:'Cebada', pill:'pill-ceb', barOk:'bar-ok-ceb', color:'#ED7D31' },
 };
 
-function buildSiembraBlock(cultCode, campos) {
-  const cfg = CULT_CFG[cultCode];
-  const totalHa = campos.reduce((s, c) => s + c.lotes.reduce((a, l) => a + (l.ha || 0), 0), 0);
-  const totalSemb = campos.reduce((s, c) => s + c.lotes.reduce((a, l) => a + (l.sembradas || 0), 0), 0);
-  const totalRiesgo = campos.reduce((s, c) => s + c.lotes.reduce((a, l) => a + (l.riesgo || 0), 0), 0);
-  const totalEfec = totalSemb - totalRiesgo;
-  const pctEfec = totalHa > 0 ? totalEfec / totalHa : 0;
-  const pctRiesgo = totalHa > 0 ? totalRiesgo / totalHa : 0;
-  const cultId = 'cult-' + cultCode.toLowerCase();
+function fmt(n,dec=0){ if(n==null||isNaN(n))return'—'; return Number(n).toLocaleString('es-UY',{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
 
-  const block = document.createElement('div');
-  block.className = 'card';
+// SVG Donut generator
+function buildDonut(segments, size=120){
+  const cx=size/2, cy=size/2, ro=size/2-4, ri=ro*0.58;
+  let angle=-90, paths='';
+  for(const seg of segments){
+    const sweep = seg.pct * 360;
+    if(sweep===0) continue;
+    const r2d = Math.PI/180;
+    const x1=cx+ro*Math.cos(angle*r2d), y1=cy+ro*Math.sin(angle*r2d);
+    const end=angle+sweep;
+    const x2=cx+ro*Math.cos(end*r2d), y2=cy+ro*Math.sin(end*r2d);
+    const xi1=cx+ri*Math.cos(angle*r2d), yi1=cy+ri*Math.sin(angle*r2d);
+    const xi2=cx+ri*Math.cos(end*r2d), yi2=cy+ri*Math.sin(end*r2d);
+    const large=sweep>180?1:0;
+    paths+=`<path d="M${x1.toFixed(2)} ${y1.toFixed(2)} A${ro} ${ro} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} L${xi2.toFixed(2)} ${yi2.toFixed(2)} A${ri} ${ri} 0 ${large} 0 ${xi1.toFixed(2)} ${yi1.toFixed(2)} Z" fill="${seg.color}" stroke="#fff" stroke-width="2"/>`;
+    angle=end;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg>`;
+}
 
-  const riesgoStr = totalRiesgo > 0 ? ` &nbsp;<span class="neg" style="font-size:11px">−${fmt(totalRiesgo)} ha resiembra</span>` : '';
+function toggleEl(id,chevId){
+  const el=document.getElementById(id),ch=document.getElementById(chevId);
+  if(!el)return; const open=el.classList.toggle('open'); if(ch)ch.classList.toggle('open',open);
+}
 
-  block.innerHTML = `
+function buildSiembraBlock(cultCode, campos){
+  const cfg=CULT_CFG[cultCode];
+  const totalHa    = campos.reduce((s,c)=>s+c.lotes.reduce((a,l)=>a+(l.ha||0),0),0);
+  const totalSemb  = campos.reduce((s,c)=>s+c.lotes.reduce((a,l)=>a+(l.sembradas||0),0),0);
+  const totalRiesgo= campos.reduce((s,c)=>s+c.lotes.reduce((a,l)=>a+(l.riesgo||0),0),0);
+  const totalEfec  = totalSemb-totalRiesgo;
+  const pctEfec    = totalHa>0?totalEfec/totalHa:0;
+  const pctRiesgo  = totalHa>0?totalRiesgo/totalHa:0;
+  const cultId     = 'cult-'+cultCode.toLowerCase();
+  const riesgoStr  = totalRiesgo>0?` &nbsp;<span class="neg" style="font-size:11px">−${fmt(totalRiesgo)} ha resiembra</span>`:'';
+
+  const block=document.createElement('div');
+  block.className='card';
+  block.innerHTML=`
     <div class="cult-row" onclick="toggleEl('${cultId}','chev-${cultId}')">
-      <span class="pill ${cfg.pillClass}">${cfg.label}</span>
+      <span class="pill ${cfg.pill}">${cfg.label}</span>
       <div class="bar-track">
         <div class="bar-fill ${cfg.barOk}" style="width:${Math.round(pctEfec*100)}%"></div>
-        ${totalRiesgo > 0 ? `<div class="bar-fill bar-risk" style="width:${Math.round(pctRiesgo*100)}%"></div>` : ''}
+        ${totalRiesgo>0?`<div class="bar-fill bar-risk" style="width:${Math.round(pctRiesgo*100)}%"></div>`:''}
       </div>
       <span class="cult-pct">${Math.round(pctEfec*100)}%</span>
-      <span class="cult-meta">${fmt(totalEfec)} / ${fmt(totalHa)} ha${riesgoStr}</span>
       <span class="chev" id="chev-${cultId}">▶</span>
     </div>
+    <div class="cult-meta">${fmt(totalEfec)} / ${fmt(totalHa)} ha${riesgoStr}</div>
     <div class="campo-list" id="${cultId}">
       <table>
         <thead><tr>
-          <th style="width:28%">Campo</th>
-          <th style="width:10%" class="r">Ha</th>
-          <th style="width:12%" class="r">Sembradas</th>
-          <th style="width:24%">Avance</th>
-          <th style="width:14%">Variedad</th>
-          <th style="width:12%" class="r">F. siembra</th>
+          <th style="width:30%">Campo</th>
+          <th style="width:12%" class="r">Ha</th>
+          <th style="width:14%" class="r">Semb.</th>
+          <th style="width:22%">Av.</th>
+          <th style="width:22%">Variedad</th>
         </tr></thead>
-        <tbody>
-          ${campos.map(c => {
-            const cHa    = c.lotes.reduce((s, l) => s + (l.ha || 0), 0);
-            const cSemb  = c.lotes.reduce((s, l) => s + (l.sembradas || 0), 0);
-            const cRiesg = c.lotes.reduce((s, l) => s + (l.riesgo || 0), 0);
-            const cEfec  = cSemb - cRiesg;
-            const cPct   = cHa > 0 ? Math.round(cEfec / cHa * 100) : 0;
-            const cPctR  = cHa > 0 ? Math.round(cRiesg / cHa * 100) : 0;
-            const varList = [...new Set(c.lotes.map(l => l.variedad).filter(Boolean))].join(', ') || '—';
-            const fechas  = c.lotes.map(l => l.fsiem).filter(Boolean);
-            const fechaStr = fechas.length > 0 ? fechas[0] : '—';
-            const rBadge = cRiesg > 0 ? `<span class="risk-badge">⚠ resiembra</span>` : '';
-            return `<tr>
-              <td>${c.nombre}${rBadge}</td>
-              <td class="r">${fmt(cHa,1)}</td>
-              <td class="r">${cEfec > 0 ? fmt(cEfec,1) : '<span class="muted">—</span>'}${cRiesg > 0 ? ` <span class="neg" style="font-size:10px">(+${fmt(cRiesg,0)} riesgo)</span>` : ''}</td>
-              <td>
-                <div class="lmini">
-                  <div class="lmini-inner ${cfg.barOk}" style="width:${cPct}%"></div>
-                  ${cPctR > 0 ? `<div class="lmini-inner bar-risk" style="width:${cPctR}%"></div>` : ''}
-                </div>${cPct}%
-              </td>
-              <td style="font-size:11px;color:#6b6b6b">${varList}</td>
-              <td class="r" style="font-size:11px;color:#6b6b6b">${fechaStr}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
+        <tbody>${campos.map(c=>{
+          const cHa    = c.lotes.reduce((s,l)=>s+(l.ha||0),0);
+          const cSemb  = c.lotes.reduce((s,l)=>s+(l.sembradas||0),0);
+          const cRiesg = c.lotes.reduce((s,l)=>s+(l.riesgo||0),0);
+          const cEfec  = cSemb-cRiesg;
+          const cPct   = cHa>0?Math.round(cEfec/cHa*100):0;
+          const cPctR  = cHa>0?Math.round(cRiesg/cHa*100):0;
+          const varList=[...new Set(c.lotes.map(l=>l.variedad).filter(Boolean))].join(', ')||'—';
+          const rBadge = cRiesg>0?`<span class="risk-badge">⚠</span>`:'';
+          return `<tr>
+            <td>${c.nombre}${rBadge}</td>
+            <td class="r">${fmt(cHa,0)}</td>
+            <td class="r">${cEfec>0?fmt(cEfec,0):'<span class="muted">—</span>'}${cRiesg>0?`<span class="neg" style="font-size:10px"> (−${fmt(cRiesg,0)})</span>`:''}</td>
+            <td>
+              <div class="lmini">
+                <div class="lmini-inner ${cfg.barOk}" style="width:${cPct}%"></div>
+                ${cPctR>0?`<div class="lmini-inner bar-risk" style="width:${cPctR}%"></div>`:''}
+              </div>${cPct}%
+            </td>
+            <td style="font-size:11px;color:#6b6b6b">${varList}</td>
+          </tr>`;
+        }).join('')}</tbody>
       </table>
     </div>`;
   return block;
 }
 
-function toggleEl(id, chevId) {
-  const el = document.getElementById(id);
-  const ch = document.getElementById(chevId);
-  if (!el) return;
-  const open = el.classList.toggle('open');
-  if (ch) ch.classList.toggle('open', open);
-}
+fetch(XLSX_URL+'?t='+Date.now())
+  .then(r=>{if(!r.ok)throw new Error('No se pudo cargar el archivo');return r.arrayBuffer();})
+  .then(buf=>{
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const ws=wb.Sheets['Avance de siembra'];
+    if(!ws)throw new Error('No se encontró la hoja "Avance de siembra"');
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
 
-fetch(XLSX_URL + '?t=' + Date.now())
-  .then(r => { if (!r.ok) throw new Error('No se pudo cargar el archivo'); return r.arrayBuffer(); })
-  .then(buf => {
-    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
-    const ws = wb.Sheets['Avance de siembra'];
-    if (!ws) throw new Error('No se encontró la hoja "Avance de siembra"');
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-
-    const lotes = [];
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
-      const campo = r[SC.campo];
-      const cult  = r[SC.cult];
-      if (!campo || !cult || typeof campo !== 'string') break;
-      if (campo.startsWith('RESUMEN')) break;
-      if (!['Cz','Tr','Ceb'].includes(String(cult).trim())) continue;
-
-      const lote     = r[SC.lote] != null ? String(r[SC.lote]) : '—';
-      const ha       = parseFloat(r[SC.ha]) || 0;
-      const sembradas= parseFloat(r[SC.sembradas]) || 0;
-      const key      = `${campo}|${lote}|${cult}`;
-      const riesgo   = RESIEMBRA[key] || 0;
-
-      // fecha
-      let fsiem = r[SC.fsiem];
-      if (fsiem instanceof Date) {
-        fsiem = fsiem.toLocaleDateString('es-UY', { day:'2-digit', month:'2-digit' });
-      } else if (typeof fsiem === 'number') {
-        // Excel serial
-        const d = new Date(Math.round((fsiem - 25569) * 86400 * 1000));
-        fsiem = d.toLocaleDateString('es-UY', { day:'2-digit', month:'2-digit' });
-      } else { fsiem = null; }
-
-      lotes.push({ campo, lote, cultCode: String(cult).trim(), ha, sembradas, riesgo,
-                   variedad: r[SC.variedad] || null, fsiem });
+    const lotes=[];
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const campo=r[SC.campo],cult=r[SC.cult];
+      if(!campo||!cult||typeof campo!=='string'||campo.startsWith('RESUMEN'))break;
+      if(!['Cz','Tr','Ceb'].includes(String(cult).trim()))continue;
+      const lote=r[SC.lote]!=null?String(r[SC.lote]):'—';
+      const ha=parseFloat(r[SC.ha])||0;
+      const sembradas=parseFloat(r[SC.sembradas])||0;
+      const key=`${campo}|${lote}|${cult}`;
+      const riesgo=RESIEMBRA[key]||0;
+      let fsiem=r[SC.fsiem];
+      if(fsiem instanceof Date){fsiem=fsiem.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit'});}
+      else if(typeof fsiem==='number'){const d=new Date(Math.round((fsiem-25569)*86400*1000));fsiem=d.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit'});}
+      else{fsiem=null;}
+      lotes.push({campo,lote,cultCode:String(cult).trim(),ha,sembradas,riesgo,variedad:r[SC.variedad]||null,fsiem});
     }
 
-    // Group by cultivo → campo
-    function groupCult(code) {
-      const filtered = lotes.filter(l => l.cultCode === code);
-      const byField = {};
-      for (const l of filtered) {
-        if (!byField[l.campo]) byField[l.campo] = [];
-        byField[l.campo].push(l);
-      }
-      return Object.entries(byField).map(([nombre, lotes]) => ({ nombre, lotes }));
+    function groupCult(code){
+      const f=lotes.filter(l=>l.cultCode===code);
+      const b={};
+      for(const l of f){if(!b[l.campo])b[l.campo]=[];b[l.campo].push(l);}
+      return Object.entries(b).map(([nombre,lotes])=>({nombre,lotes}));
     }
 
-    const colza  = groupCult('Cz');
-    const trigo  = groupCult('Tr');
-    const cebada = groupCult('Ceb');
+    const colza=groupCult('Cz'),trigo=groupCult('Tr'),cebada=groupCult('Ceb');
+
+    function stats(grupos){
+      const all=grupos.flatMap(g=>g.lotes);
+      const ha=all.reduce((s,l)=>s+l.ha,0);
+      const semb=all.reduce((s,l)=>s+l.sembradas,0);
+      const riesgo=all.reduce((s,l)=>s+l.riesgo,0);
+      const efec=semb-riesgo;
+      return{ha,efec,pct:ha>0?Math.round(efec/ha*100):0};
+    }
+    const sc=stats(colza),st=stats(trigo),seb=stats(cebada);
+    const tot={ha:sc.ha+st.ha+seb.ha,efec:sc.efec+st.efec+seb.efec};
+    tot.pct=tot.ha>0?Math.round(tot.efec/tot.ha*100):0;
 
     // KPIs
-    function stats(grupos) {
-      const all = grupos.flatMap(g => g.lotes);
-      const ha  = all.reduce((s, l) => s + l.ha, 0);
-      const semb = all.reduce((s, l) => s + l.sembradas, 0);
-      const riesgo = all.reduce((s, l) => s + l.riesgo, 0);
-      const efec = semb - riesgo;
-      return { ha, efec, pct: ha > 0 ? Math.round(efec/ha*100) : 0 };
-    }
-    const sc = stats(colza), st = stats(trigo), seb = stats(cebada);
-    const tot = { ha: sc.ha+st.ha+seb.ha, efec: sc.efec+st.efec+seb.efec };
-    tot.pct = tot.ha > 0 ? Math.round(tot.efec/tot.ha*100) : 0;
-
-    document.getElementById('kpis').innerHTML = `
+    document.getElementById('kpis').innerHTML=`
       <div class="kpi"><div class="kpi-label">Colza</div><div class="kpi-val">${sc.pct}%</div><div class="kpi-sub">${fmt(sc.efec)} / ${fmt(sc.ha)} ha</div></div>
       <div class="kpi"><div class="kpi-label">Trigo</div><div class="kpi-val">${st.pct}%</div><div class="kpi-sub">${fmt(st.efec)} / ${fmt(st.ha)} ha</div></div>
       <div class="kpi"><div class="kpi-label">Cebada</div><div class="kpi-val">${seb.pct}%</div><div class="kpi-sub">${fmt(seb.efec)} / ${fmt(seb.ha)} ha</div></div>
       <div class="kpi"><div class="kpi-label">Total invierno</div><div class="kpi-val">${tot.pct}%</div><div class="kpi-sub">${fmt(tot.efec)} / ${fmt(tot.ha)} ha</div></div>`;
 
-    const blocks = document.getElementById('blocks');
-    if (colza.length)  blocks.appendChild(buildSiembraBlock('Cz',  colza));
-    if (trigo.length)  blocks.appendChild(buildSiembraBlock('Tr',  trigo));
-    if (cebada.length) blocks.appendChild(buildSiembraBlock('Ceb', cebada));
+    // Donut
+    const totalHaTot = sc.ha+st.ha+seb.ha;
+    const segments = [
+      {label:'Colza',  ha:sc.ha,  pct:sc.ha/totalHaTot,  color:'#2E5C1E'},
+      {label:'Trigo',  ha:st.ha,  pct:st.ha/totalHaTot,  color:'#2E75B6'},
+      {label:'Cebada', ha:seb.ha, pct:seb.ha/totalHaTot, color:'#ED7D31'},
+    ];
+    document.getElementById('donut-card').innerHTML=`
+      <div class="donut-wrap">${buildDonut(segments,110)}</div>
+      <div class="donut-legend">
+        ${segments.map(s=>`
+          <div class="leg-item">
+            <div class="leg-sq" style="background:${s.color}"></div>
+            <span class="leg-name">${s.label}</span>
+            <span class="leg-val">${fmt(s.ha)} ha · ${Math.round(s.pct*100)}%</span>
+          </div>`).join('')}
+      </div>`;
 
-    document.getElementById('week-label').textContent =
-      new Date().toLocaleDateString('es-UY', { day:'2-digit', month:'2-digit', year:'numeric' });
+    // Blocks
+    const blocks=document.getElementById('blocks');
+    if(colza.length)  blocks.appendChild(buildSiembraBlock('Cz',colza));
+    if(trigo.length)  blocks.appendChild(buildSiembraBlock('Tr',trigo));
+    if(cebada.length) blocks.appendChild(buildSiembraBlock('Ceb',cebada));
 
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
+    document.getElementById('week-label').textContent=new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
   })
-  .catch(err => {
-    document.getElementById('loading').style.display = 'none';
-    const eb = document.getElementById('error-box');
-    eb.textContent = '⚠ ' + err.message + '. Verificá que avance.xlsx esté en el repositorio.';
-    eb.style.display = 'block';
+  .catch(err=>{
+    document.getElementById('loading').style.display='none';
+    const eb=document.getElementById('error-box');
+    eb.textContent='⚠ '+err.message+'. Verificá que avance.xlsx esté en el repositorio.';
+    eb.style.display='block';
   });
 </script>
 </body>
