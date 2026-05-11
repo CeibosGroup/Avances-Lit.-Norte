@@ -210,7 +210,30 @@ fetch(XLSX_URL+'?t='+Date.now())
       return{ha,cos,avPct:ha>0?cos/ha:0,rinde,desv:rinde&&est?rinde-est:null};
     }
     const s1=totalStats(sj1),s2=totalStats(sj2);
+    // Global totals
+    const gHa  = s1.ha + s2.ha;
+    const gCos = s1.cos + s2.cos;
+    const gPct = gHa > 0 ? Math.round(gCos/gHa*100) : 0;
+    // Weighted global rinde
+    const allL = [...sj1,...sj2].flatMap(c=>c.lotes);
+    const gRinde = weightedRinde(allL);
+    let gEH=0,gE=0; for(const l of allL){if(l.ha>0&&l.estRinde>0){gEH+=l.ha;gE+=l.ha*l.estRinde;}}
+    const gEst = gEH>0?gE/gEH:null;
+    const gDesv = gRinde&&gEst?gRinde-gEst:null;
+
     document.getElementById('kpis').innerHTML=`
+      <div class="kpi" style="grid-column:1/-1;background:#f0efe9;display:flex;align-items:center;gap:16px;padding:12px 14px;">
+        <div style="flex:1">
+          <div class="kpi-label">Avance global</div>
+          <div style="font-size:24px;font-weight:600;margin:2px 0">${gPct}%</div>
+          <div class="kpi-sub">${fmt(gCos)} / ${fmt(gHa)} ha cosechadas</div>
+        </div>
+        <div style="text-align:right">
+          <div class="kpi-label">Rinde global</div>
+          <div style="font-size:24px;font-weight:600;margin:2px 0">${gRinde?fmt(gRinde):'—'}</div>
+          <div class="kpi-sub ${desvClass(gDesv)}">${gDesv!=null?desvStr(gDesv)+' kg/ha vs est.':'—'}</div>
+        </div>
+      </div>
       <div class="kpi"><div class="kpi-label">Sj1 avance</div><div class="kpi-val">${Math.round(s1.avPct*100)}%</div><div class="kpi-sub" style="color:#6b6b6b">${fmt(s1.cos)} / ${fmt(s1.ha)} ha</div></div>
       <div class="kpi"><div class="kpi-label">Sj1 rinde</div><div class="kpi-val">${s1.rinde?fmt(s1.rinde):'—'}</div><div class="kpi-sub ${desvClass(s1.desv)}">${s1.desv!=null?desvStr(s1.desv)+' kg/ha':'—'}</div></div>
       <div class="kpi"><div class="kpi-label">Sj2 avance</div><div class="kpi-val">${Math.round(s2.avPct*100)}%</div><div class="kpi-sub" style="color:#6b6b6b">${fmt(s2.cos)} / ${fmt(s2.ha)} ha</div></div>
