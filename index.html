@@ -166,9 +166,9 @@ function generarPDFResumen(){
         doc.setFillColor(31,78,121);doc.roundedRect(x,y,2,18,1,1,'F');
         doc.setTextColor(100,100,100);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
         doc.text(k.lbl,x+4,y+5);
-        doc.setTextColor(...(k.valC||[20,20,20]));doc.setFontSize(12);doc.setFont('helvetica','bold');
+        doc.setTextColor(...(k.valC||[20,20,20]))));doc.setFontSize(12);doc.setFont('helvetica','bold');
         doc.text(k.val,x+4,y+13);
-        if(k.sub){doc.setTextColor(...k.subC);doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.text(k.sub,x+4,y+17);}
+        if(k.sub){doc.setTextColor(k.subC[0],k.subC[1],k.subC[2]);doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.text(k.sub,x+4,y+17);}
       });
       y+=22;
 
@@ -205,7 +205,7 @@ function generarPDFResumen(){
         doc.text(ri?fN(ri):'—',M+125,y+4.8,{align:'right'});
         if(dv!=null){
           const dc=dv<0?[192,0,0]:[46,92,30];
-          doc.setTextColor(...dc);doc.setFont('helvetica','bold');
+          doc.setTextColor(dc[0],dc[1],dc[2]);doc.setFont('helvetica','bold');
           doc.text(dSign(dv),M+147,y+4.8,{align:'right'});
           doc.text((dp>=0?'+':'')+dp.toFixed(1)+'%',M+CW,y+4.8,{align:'right'});
         }
@@ -222,7 +222,7 @@ function generarPDFResumen(){
       doc.text(gPct+'%',M+105,y+5,{align:'right'});
       doc.text(fN(gR),M+125,y+5,{align:'right'});
       if(gD!=null){
-        doc.setTextColor(gD<0?[192,0,0]:[46,92,30]);
+        doc.setTextColor(...(gD<0?[192,0,0]:[46,92,30]));
         doc.setTextColor(...(gD<0?[192,0,0]:[46,92,30]));
         doc.text(dSign(gD),M+147,y+5,{align:'right'});
         doc.text((gD/gE*100>=0?'+':'')+(gD/gE*100).toFixed(1)+'%',M+CW,y+5,{align:'right'});
@@ -291,7 +291,7 @@ function generarPDFResumen(){
         doc.setFillColor(...col);doc.roundedRect(x,y,2,22,1,1,'F');
         doc.setTextColor(80,80,80);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
         doc.text(isTotal?'Total invierno':cultLabel[cv],x+4,y+5);
-        doc.setTextColor(...col);doc.setFontSize(14);doc.setFont('helvetica','bold');
+        doc.setTextColor(col[0],col[1],col[2]);doc.setFontSize(14);doc.setFont('helvetica','bold');
         doc.text(st.pctEfec+'%',x+4,y+14);
         doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
         doc.text(fN(st.efec)+' / '+fN(st.ha)+' ha',x+4,y+20);
@@ -341,7 +341,7 @@ function generarPDFResumen(){
         } else {
           doc.text('—',M+148,y+5,{align:'right'});
           doc.text(s.efec>0?fN(s.efec):'—',M+170,y+5,{align:'right'});
-          doc.setTextColor(s.efec>0?[30,30,30]:[160,160,160]);
+          doc.setTextColor(...(s.efec>0?[30,30,30]:[160,160,160]));
           doc.text(pctEfec>0?pctEfec+'%':'0%',M+CW,y+5,{align:'right'});
         }
         y+=7;rn++;
