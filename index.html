@@ -85,184 +85,8 @@ fetch('avance.xlsx?t='+Date.now()).then(r=>r.arrayBuffer()).then(()=>{
 });
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script>
-function generarPDFResumen(){
-  const btn = document.getElementById('pdf-btn-index');
-  btn.textContent = '...'; btn.disabled = true;
 
-  fetch('avance.xlsx?t='+Date.now())
-    .then(r=>r.arrayBuffer())
-    .then(buf=>{
-      const XLSX2 = window.XLSX || XLSX;
-      const wb = XLSX2.read(buf,{type:'array'});
-      const fecha = new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-      const W=210, margin=14, colW=W-margin*2;
-      let y=14;
-
-      // ── Header ──
-      doc.setFillColor(46,92,30);
-      doc.rect(0,0,W,18,'F');
-      doc.setTextColor(255,255,255);
-      doc.setFontSize(13); doc.setFont('helvetica','bold');
-      doc.text('Resumen Semanal — Litoral Norte', margin, 12);
-      doc.setFontSize(9); doc.setFont('helvetica','normal');
-      doc.text(fecha, W-margin, 12, {align:'right'});
-      y=26;
-
-      // ── Parse cosecha ──
-      const wsCos = wb.Sheets['Avance cosecha'];
-      const rowsCos = wsCos ? XLSX2.utils.sheet_to_json(wsCos,{header:1,defval:null}) : [];
-      const cosData=[];
-      for(let i=1;i<rowsCos.length;i++){
-        const r=rowsCos[i];
-        if(!r[0]||typeof r[0]!=='string'||r[0].startsWith('RESUMEN'))break;
-        const cultV=r[5];
-        if(!cultV)continue;
-        cosData.push({campo:r[0],lote:r[1]!=null?String(r[1]):'—',cultV:String(cultV).trim(),
-          ha:parseFloat(r[2])||0,estR:parseFloat(r[9])||0,hacos:parseFloat(r[10])||0,rinde:parseFloat(r[11])||0});
-      }
-      // Group by campo+cultV
-      const cosMap={};
-      for(const l of cosData){
-        const k=l.campo+'|'+l.cultV;
-        if(!cosMap[k])cosMap[k]={campo:l.campo,cultV:l.cultV,ha:0,hacos:0,prod:0,estProd:0,estHa:0};
-        cosMap[k].ha+=l.ha; cosMap[k].hacos+=l.hacos;
-        if(l.hacos>0&&l.rinde>0){cosMap[k].prod+=l.hacos*l.rinde;}
-        if(l.ha>0&&l.estR>0){cosMap[k].estProd+=l.ha*l.estR;cosMap[k].estHa+=l.ha;}
-      }
-      const cosRows=Object.values(cosMap).sort((a,b)=>a.cultV.localeCompare(b.cultV)||a.campo.localeCompare(b.campo));
-      const totCos={ha:0,hacos:0,prod:0,estProd:0,estHa:0};
-      for(const r of cosRows){totCos.ha+=r.ha;totCos.hacos+=r.hacos;totCos.prod+=r.prod;totCos.estProd+=r.estProd;totCos.estHa+=r.estHa;}
-      const gRinde=totCos.hacos>0?Math.round(totCos.prod/totCos.hacos):0;
-      const gEst=totCos.estHa>0?Math.round(totCos.estProd/totCos.estHa):0;
-      const gPct=totCos.ha>0?Math.round(totCos.hacos/totCos.ha*100):0;
-
-      // Cosecha section title
-      doc.setFillColor(31,78,121);
-      doc.rect(margin,y,colW,8,'F');
-      doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
-      doc.text('COSECHA SOJA',margin+3,y+5.5);
-      doc.setFontSize(8);doc.setFont('helvetica','normal');
-      doc.text('Avance: '+gPct+'%  ·  Rinde: '+(gRinde||'—')+' kg/ha  ·  Desvío: '+(gRinde&&gEst?(gRinde-gEst>=0?'+':'')+(gRinde-gEst)+' kg/ha':'—'), W-margin-2,y+5.5,{align:'right'});
-      y+=10;
-
-      // Col headers
-      const cc=[{t:'Campo',x:margin+2},{t:'Cult.',x:margin+46},{t:'Ha',x:margin+62,r:true},
-        {t:'Cosechadas',x:margin+84,r:true},{t:'%',x:margin+100,r:true},
-        {t:'Rinde',x:margin+120,r:true},{t:'Desvío',x:margin+colW,r:true}];
-      doc.setFillColor(210,225,240);doc.rect(margin,y,colW,6,'F');
-      doc.setTextColor(31,78,121);doc.setFontSize(7);doc.setFont('helvetica','bold');
-      cc.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
-      y+=7;
-
-      let row=0;
-      for(const r of cosRows){
-        const rinde=r.hacos>0?Math.round(r.prod/r.hacos):0;
-        const est=r.estHa>0?Math.round(r.estProd/r.estHa):0;
-        const pct=r.ha>0?Math.round(r.hacos/r.ha*100):0;
-        const desv=rinde&&est?rinde-est:null;
-        doc.setFillColor(...(row%2===0?[255,255,255]:[248,248,245]));
-        doc.rect(margin,y,colW,6,'F');
-        doc.setTextColor(20,20,20);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
-        doc.text(r.campo,margin+2,y+4.5);
-        doc.text(r.cultV,margin+46,y+4.5);
-        doc.text(r.ha.toLocaleString('es-UY',{maximumFractionDigits:0}),margin+62,y+4.5,{align:'right'});
-        doc.text(r.hacos>0?r.hacos.toLocaleString('es-UY',{maximumFractionDigits:0}):'—',margin+84,y+4.5,{align:'right'});
-        doc.text(pct+'%',margin+100,y+4.5,{align:'right'});
-        doc.text(rinde>0?rinde.toLocaleString('es-UY'):'—',margin+120,y+4.5,{align:'right'});
-        if(desv!=null){doc.setTextColor(...(desv<0?[192,0,0]:[46,92,30]));doc.text((desv>=0?'+':'')+desv,margin+colW,y+4.5,{align:'right'});}
-        y+=6;row++;
-        if(y>270){doc.addPage();y=14;}
-      }
-      // Total row
-      doc.setFillColor(220,230,245);doc.rect(margin,y,colW,7,'F');
-      doc.setTextColor(31,78,121);doc.setFontSize(8);doc.setFont('helvetica','bold');
-      doc.text('TOTAL',margin+2,y+5);
-      doc.text(totCos.ha.toLocaleString('es-UY',{maximumFractionDigits:0}),margin+62,y+5,{align:'right'});
-      doc.text(totCos.hacos.toLocaleString('es-UY',{maximumFractionDigits:0}),margin+84,y+5,{align:'right'});
-      doc.text(gPct+'%',margin+100,y+5,{align:'right'});
-      doc.text(gRinde?gRinde.toLocaleString('es-UY'):'—',margin+120,y+5,{align:'right'});
-      if(gRinde&&gEst){const gd=gRinde-gEst;doc.setTextColor(...(gd<0?[192,0,0]:[46,92,30]));doc.text((gd>=0?'+':'')+gd,margin+colW,y+5,{align:'right'});}
-      y+=12;
-      if(y>250){doc.addPage();y=14;}
-
-      // ── Parse siembra ──
-      const wsSiem = wb.Sheets['Avance de siembra'];
-      const rowsSiem = wsSiem ? XLSX2.utils.sheet_to_json(wsSiem,{header:1,defval:null}) : [];
-      const siemData=[];
-      for(let i=1;i<rowsSiem.length;i++){
-        const r=rowsSiem[i];
-        if(!r[0]||typeof r[0]!=='string'||r[0].startsWith('RESUMEN'))break;
-        const cult=r[3];
-        if(!['Cz','Tr','Ceb'].includes(String(cult||'').trim()))continue;
-        const key=r[0]+'|'+String(cult).trim();
-        const existing=siemData.find(s=>s.key===key);
-        const ha=parseFloat(r[2])||0, semb=parseFloat(r[4])||0;
-        if(existing){existing.ha+=ha;existing.semb+=semb;}
-        else{siemData.push({key,campo:r[0],cult:String(cult).trim(),ha,semb,variedad:r[9]||''});}
-      }
-      const RIESGO={'San Luis|Cz':138.88};
-      for(const s of siemData){const rk=s.campo+'|'+s.cult;s.riesgo=RIESGO[rk]||0;s.efec=s.semb-s.riesgo;}
-      siemData.sort((a,b)=>a.cult.localeCompare(b.cult)||a.campo.localeCompare(b.campo));
-      const cultLabels={'Cz':'Colza','Tr':'Trigo','Ceb':'Cebada'};
-      const totSiem={ha:0,efec:0};
-      for(const s of siemData){totSiem.ha+=s.ha;totSiem.efec+=s.efec;}
-
-      // Siembra section title
-      doc.setFillColor(46,92,30);
-      doc.rect(margin,y,colW,8,'F');
-      doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
-      doc.text('SIEMBRA INVIERNO 2026',margin+3,y+5.5);
-      const sPct=totSiem.ha>0?Math.round(totSiem.efec/totSiem.ha*100):0;
-      doc.setFontSize(8);doc.setFont('helvetica','normal');
-      doc.text('Avance: '+sPct+'%  ·  '+totSiem.efec.toLocaleString('es-UY',{maximumFractionDigits:0})+' / '+totSiem.ha.toLocaleString('es-UY',{maximumFractionDigits:0})+' ha',W-margin-2,y+5.5,{align:'right'});
-      y+=10;
-
-      // Col headers
-      const sc2=[{t:'Campo',x:margin+2},{t:'Cultivo',x:margin+52},{t:'Ha',x:margin+80,r:true},
-        {t:'Sembradas',x:margin+104,r:true},{t:'%',x:margin+118,r:true},{t:'Variedad',x:margin+124}];
-      doc.setFillColor(215,235,210);doc.rect(margin,y,colW,6,'F');
-      doc.setTextColor(46,92,30);doc.setFontSize(7);doc.setFont('helvetica','bold');
-      sc2.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
-      y+=7;
-
-      row=0;
-      for(const s of siemData){
-        const pct=s.ha>0?Math.round(s.efec/s.ha*100):0;
-        doc.setFillColor(...(row%2===0?[255,255,255]:[248,248,245]));
-        doc.rect(margin,y,colW,6,'F');
-        doc.setTextColor(20,20,20);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
-        doc.text(s.campo+(s.riesgo>0?' ⚠':' '),margin+2,y+4.5);
-        doc.text(cultLabels[s.cult]||s.cult,margin+52,y+4.5);
-        doc.text(s.ha.toLocaleString('es-UY',{maximumFractionDigits:0}),margin+80,y+4.5,{align:'right'});
-        doc.text(s.efec>0?s.efec.toLocaleString('es-UY',{maximumFractionDigits:0}):'—',margin+104,y+4.5,{align:'right'});
-        doc.text(pct+'%',margin+118,y+4.5,{align:'right'});
-        doc.text((s.variedad||'').substring(0,28),margin+124,y+4.5);
-        if(s.riesgo>0){doc.setTextColor(192,0,0);doc.text('('+s.riesgo.toLocaleString('es-UY',{maximumFractionDigits:0})+' ha resiembra)',margin+124,y+4.5);}
-        y+=6;row++;
-        if(y>275){doc.addPage();y=14;}
-      }
-      // Total
-      doc.setFillColor(215,235,210);doc.rect(margin,y,colW,7,'F');
-      doc.setTextColor(46,92,30);doc.setFontSize(8);doc.setFont('helvetica','bold');
-      doc.text('TOTAL',margin+2,y+5);
-      doc.text(totSiem.ha.toLocaleString('es-UY',{maximumFractionDigits:0}),margin+80,y+5,{align:'right'});
-      doc.text(totSiem.efec.toLocaleString('es-UY',{maximumFractionDigits:0}),margin+104,y+5,{align:'right'});
-      doc.text(sPct+'%',margin+118,y+5,{align:'right'});
-      y+=12;
-
-      // Footer
-      doc.setTextColor(150,150,150);doc.setFontSize(7);doc.setFont('helvetica','normal');
-      doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha,W/2,290,{align:'center'});
-      doc.save('ResumenSemanal_LitoralNorte_'+fecha.replace(/\//g,'-')+'.pdf');
-    })
-    .catch(e=>alert('Error: '+e.message))
-    .finally(()=>{btn.textContent='⬇ PDF resumen';btn.disabled=false;});
-}
-</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -277,111 +101,138 @@ function generarPDFResumen(){
       const wb=X.read(buf,{type:'array'});
       const {jsPDF}=window.jspdf;
       const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-      const W=210,M=14,CW=W-M*2;
-      let y=14;
+      const W=210, M=12, CW=W-M*2;
+      let y=0;
       const fecha=new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
       const fN=(n,d=0)=>n==null||isNaN(n)?'—':Number(n).toLocaleString('es-UY',{minimumFractionDigits:d,maximumFractionDigits:d});
+      const dSign=(n)=>n==null?'—':(n>=0?'+':'')+fN(n);
+      const dPct=(n,base)=>(!n||!base)?'':' ('+(n>=0?'+':'')+(n/base*100).toFixed(1)+'%)';
 
-      // ── Header ──
-      doc.setFillColor(46,92,30);doc.rect(0,0,W,20,'F');
+      // ── HEADER ──
+      doc.setFillColor(30,60,20);
+      doc.rect(0,0,W,22,'F');
       doc.setTextColor(255,255,255);
-      doc.setFontSize(14);doc.setFont('helvetica','bold');
-      doc.text('Resumen Semanal — Litoral Norte',M,9);
-      doc.setFontSize(8);doc.setFont('helvetica','normal');
-      doc.text('Ceibos Group Uruguay · Campaña 2025/26',M,15);
-      doc.text(fecha,W-M,15,{align:'right'});
-      y=26;
+      doc.setFontSize(15);doc.setFont('helvetica','bold');
+      doc.text('Resumen Semanal — Litoral Norte',M,10);
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(200,230,200);
+      doc.text('Ceibos Group Uruguay · Campaña 2025/26',M,16);
+      doc.text(fecha,W-M,16,{align:'right'});
+      y=28;
 
-      // ── COSECHA ──
+      // ══════════════════════════════
+      // COSECHA
+      // ══════════════════════════════
       const wsCos=wb.Sheets['Avance cosecha'];
       const rowsCos=wsCos?X.utils.sheet_to_json(wsCos,{header:1,defval:null}):[];
-      // Group by campo+cultivo
       const cosMap={};
       for(let i=1;i<rowsCos.length;i++){
         const r=rowsCos[i];
         if(!r[0]||typeof r[0]!=='string'||r[0].startsWith('RESUMEN'))break;
-        const cultV=String(r[5]||'').trim();
-        if(!cultV)continue;
-        const k=r[0]+'||'+cultV;
-        if(!cosMap[k])cosMap[k]={campo:r[0],cultV,ha:0,hacos:0,prod:0,estProd:0,estHa:0};
-        const ha=parseFloat(r[2])||0,hacos=parseFloat(r[10])||0,rinde=parseFloat(r[11])||0,estR=parseFloat(r[9])||0;
-        cosMap[k].ha+=ha;cosMap[k].hacos+=hacos;
-        if(hacos>0&&rinde>0)cosMap[k].prod+=hacos*rinde;
-        if(ha>0&&estR>0){cosMap[k].estProd+=ha*estR;cosMap[k].estHa+=ha;}
+        const cv=String(r[5]||'').trim();
+        if(!cv)continue;
+        const k=r[0]+'||'+cv;
+        if(!cosMap[k])cosMap[k]={campo:r[0],cv,ha:0,hacos:0,prod:0,estP:0,estH:0};
+        const ha=parseFloat(r[2])||0,hc=parseFloat(r[10])||0,ri=parseFloat(r[11])||0,es=parseFloat(r[9])||0;
+        cosMap[k].ha+=ha;cosMap[k].hacos+=hc;
+        if(hc>0&&ri>0)cosMap[k].prod+=hc*ri;
+        if(ha>0&&es>0){cosMap[k].estP+=ha*es;cosMap[k].estH+=ha;}
       }
-      const cosRows=Object.values(cosMap).sort((a,b)=>a.cultV.localeCompare(b.cultV)||a.campo.localeCompare(b.campo));
-      const totC={ha:0,hacos:0,prod:0,estProd:0,estHa:0};
-      cosRows.forEach(r=>{totC.ha+=r.ha;totC.hacos+=r.hacos;totC.prod+=r.prod;totC.estProd+=r.estProd;totC.estHa+=r.estHa;});
-      const gR=totC.hacos>0?Math.round(totC.prod/totC.hacos):0;
-      const gE=totC.estHa>0?Math.round(totC.estProd/totC.estHa):0;
-      const gPct=totC.ha>0?Math.round(totC.hacos/totC.ha*100):0;
-      const gDesv=gR&&gE?gR-gE:null;
-      const gDesvPct=gDesv&&gE?(gDesv/gE*100):null;
+      const cosRows=Object.values(cosMap).sort((a,b)=>a.cv.localeCompare(b.cv)||a.campo.localeCompare(b.campo));
+      const tC={ha:0,hc:0,prod:0,estP:0,estH:0};
+      cosRows.forEach(r=>{tC.ha+=r.ha;tC.hc+=r.hacos;tC.prod+=r.prod;tC.estP+=r.estP;tC.estH+=r.estH;});
+      const gR=tC.hc>0?Math.round(tC.prod/tC.hc):0;
+      const gE=tC.estH>0?Math.round(tC.estP/tC.estH):0;
+      const gPct=tC.ha>0?Math.round(tC.hc/tC.ha*100):0;
+      const gD=gR&&gE?gR-gE:null;
 
-      // Summary banner cosecha
-      doc.setFillColor(31,78,121);doc.roundedRect(M,y,CW,14,2,2,'F');
-      doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont('helvetica','bold');
-      doc.text('COSECHA SOJA',M+4,y+6);
-      doc.setFontSize(9);doc.setFont('helvetica','normal');
-      doc.text('Avance: '+gPct+'%  ·  '+fN(totC.hacos)+' / '+fN(totC.ha)+' ha',M+4,y+12);
-      doc.setFontSize(10);doc.setFont('helvetica','bold');
-      doc.text('Rinde: '+fN(gR)+' kg/ha',M+CW/2,y+6);
-      doc.setFontSize(9);doc.setFont('helvetica','normal');
-      const desvTxt=gDesv!=null?(gDesv>=0?'+':'')+fN(gDesv)+' kg/ha ('+(gDesvPct>=0?'+':'')+gDesvPct.toFixed(1)+'%) vs est.':'—';
-      const dCol=gDesv<0?[255,180,180]:gDesv>0?[180,255,180]:[200,200,200];
-      doc.setTextColor(...dCol);doc.text(desvTxt,M+CW/2,y+12);
-      y+=18;
+      // Section label
+      doc.setFillColor(31,78,121);
+      doc.roundedRect(M,y,CW,7,1,1,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+      doc.text('COSECHA SOJA',M+3,y+5);
+      y+=10;
+
+      // 4 KPI cards
+      const kW=(CW-6)/4;
+      const kpis=[
+        {lbl:'Avance global',val:gPct+'%',sub:fN(tC.hc)+' / '+fN(tC.ha)+' ha',subC:[80,80,80]},
+        {lbl:'Rinde global',val:fN(gR)+' kg/ha',sub:'Estimado: '+fN(gE)+' kg/ha',subC:[80,80,80]},
+        {lbl:'Desvío (kg/ha)',val:(gD!=null?(gD>=0?'+':'')+fN(gD):' — '),sub:'',subC:gD<0?[192,0,0]:[46,92,30],valC:gD<0?[192,0,0]:gD>0?[46,92,30]:[40,40,40]},
+        {lbl:'Desvío (%)',val:(gD&&gE?(gD>=0?'+':'')+(gD/gE*100).toFixed(1)+'%':'—'),sub:'',subC:[80,80,80],valC:gD<0?[192,0,0]:gD>0?[46,92,30]:[40,40,40]},
+      ];
+      kpis.forEach((k,i)=>{
+        const x=M+i*(kW+2);
+        doc.setFillColor(240,245,252);doc.roundedRect(x,y,kW,18,2,2,'F');
+        doc.setFillColor(31,78,121);doc.roundedRect(x,y,2,18,1,1,'F');
+        doc.setTextColor(100,100,100);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
+        doc.text(k.lbl,x+4,y+5);
+        doc.setTextColor(...(k.valC||[20,20,20]));doc.setFontSize(12);doc.setFont('helvetica','bold');
+        doc.text(k.val,x+4,y+13);
+        if(k.sub){doc.setTextColor(...k.subC);doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.text(k.sub,x+4,y+17);}
+      });
+      y+=22;
 
       // Table header
-      doc.setFillColor(220,230,245);doc.rect(M,y,CW,6,'F');
+      const cCols=[
+        {t:'Campo',x:M,w:42,r:false},
+        {t:'Cult.',x:M+43,w:12,r:false},
+        {t:'Ha',x:M+57,w:16,r:true},
+        {t:'Cosech.',x:M+75,w:18,r:true},
+        {t:'Av.',x:M+95,w:10,r:true},
+        {t:'Rinde',x:M+107,w:18,r:true},
+        {t:'Desv. kg',x:M+127,w:20,r:true},
+        {t:'Desv. %',x:M+CW,w:0,r:true},
+      ];
+      doc.setFillColor(210,225,242);doc.rect(M,y,CW,6,'F');
       doc.setTextColor(31,78,121);doc.setFontSize(7);doc.setFont('helvetica','bold');
-      const cth=[{t:'Campo',x:M+2},{t:'Cult.',x:M+44},{t:'Ha',x:M+62,r:true},
-        {t:'Cosech.',x:M+82,r:true},{t:'Av.',x:M+96,r:true},{t:'Rinde',x:M+114,r:true},
-        {t:'Desv. kg',x:M+134,r:true},{t:'Desv. %',x:M+CW,r:true}];
-      cth.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
+      cCols.forEach(col=>doc.text(col.t,col.r?col.x+col.w:col.x+2,y+4.5,col.r?{align:'right'}:{}));
       y+=7;
 
-      let rowN=0;
+      let rn=0;
       cosRows.forEach(r=>{
-        const rinde=r.hacos>0?Math.round(r.prod/r.hacos):0;
-        const est=r.estHa>0?Math.round(r.estProd/r.estHa):0;
+        const ri=r.hacos>0?Math.round(r.prod/r.hacos):null;
+        const es=r.estH>0?Math.round(r.estP/r.estH):null;
         const pct=r.ha>0?Math.round(r.hacos/r.ha*100):0;
-        const desv=rinde&&est?rinde-est:null;
-        const desvPct=desv&&est?(desv/est*100):null;
-        doc.setFillColor(...(rowN%2===0?[255,255,255]:[246,249,253]));doc.rect(M,y,CW,6,'F');
-        doc.setTextColor(20,20,20);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
-        doc.text(r.campo,M+2,y+4.5);
-        doc.text(r.cultV,M+44,y+4.5);
-        doc.text(fN(r.ha),M+62,y+4.5,{align:'right'});
-        doc.text(r.hacos>0?fN(r.hacos):'—',M+82,y+4.5,{align:'right'});
-        doc.text(pct+'%',M+96,y+4.5,{align:'right'});
-        doc.text(rinde>0?fN(rinde):'—',M+114,y+4.5,{align:'right'});
-        if(desv!=null){
-          const dc=desv<0?[192,0,0]:[46,92,30];
+        const dv=ri&&es?ri-es:null;
+        const dp=dv&&es?dv/es*100:null;
+        doc.setFillColor(...(rn%2===0?[255,255,255]:[244,249,255]));doc.rect(M,y,CW,6.5,'F');
+        doc.setTextColor(30,30,30);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+        doc.text(r.campo,M+2,y+4.8);
+        doc.text(r.cv,M+45,y+4.8);
+        doc.text(fN(r.ha),M+73,y+4.8,{align:'right'});
+        doc.text(r.hacos>0?fN(r.hacos):'—',M+93,y+4.8,{align:'right'});
+        doc.text(pct+'%',M+105,y+4.8,{align:'right'});
+        doc.text(ri?fN(ri):'—',M+125,y+4.8,{align:'right'});
+        if(dv!=null){
+          const dc=dv<0?[192,0,0]:[46,92,30];
           doc.setTextColor(...dc);doc.setFont('helvetica','bold');
-          doc.text((desv>=0?'+':'')+fN(desv),M+134,y+4.5,{align:'right'});
-          doc.text((desvPct>=0?'+':'')+desvPct.toFixed(1)+'%',M+CW,y+4.5,{align:'right'});
+          doc.text(dSign(dv),M+147,y+4.8,{align:'right'});
+          doc.text((dp>=0?'+':'')+dp.toFixed(1)+'%',M+CW,y+4.8,{align:'right'});
         }
-        y+=6;rowN++;
+        y+=6.5;rn++;
         if(y>272){doc.addPage();y=14;}
       });
-      // Total row
-      doc.setFillColor(210,225,245);doc.rect(M,y,CW,7,'F');
+
+      // Total cosecha
+      doc.setFillColor(210,225,242);doc.rect(M,y,CW,7,'F');
       doc.setTextColor(31,78,121);doc.setFontSize(8);doc.setFont('helvetica','bold');
-      doc.text('TOTAL COSECHA',M+2,y+5);
-      doc.text(fN(totC.ha),M+62,y+5,{align:'right'});
-      doc.text(fN(totC.hacos),M+82,y+5,{align:'right'});
-      doc.text(gPct+'%',M+96,y+5,{align:'right'});
-      doc.text(fN(gR),M+114,y+5,{align:'right'});
-      if(gDesv!=null){
-        doc.setTextColor(...(gDesv<0?[192,0,0]:[46,92,30]));
-        doc.text((gDesv>=0?'+':'')+fN(gDesv),M+134,y+5,{align:'right'});
-        doc.text((gDesvPct>=0?'+':'')+gDesvPct.toFixed(1)+'%',M+CW,y+5,{align:'right'});
+      doc.text('TOTAL',M+2,y+5);
+      doc.text(fN(tC.ha),M+73,y+5,{align:'right'});
+      doc.text(fN(tC.hc),M+93,y+5,{align:'right'});
+      doc.text(gPct+'%',M+105,y+5,{align:'right'});
+      doc.text(fN(gR),M+125,y+5,{align:'right'});
+      if(gD!=null){
+        doc.setTextColor(gD<0?[192,0,0]:[46,92,30]);
+        doc.setTextColor(...(gD<0?[192,0,0]:[46,92,30]));
+        doc.text(dSign(gD),M+147,y+5,{align:'right'});
+        doc.text((gD/gE*100>=0?'+':'')+(gD/gE*100).toFixed(1)+'%',M+CW,y+5,{align:'right'});
       }
       y+=12;
       if(y>240){doc.addPage();y=14;}
 
-      // ── SIEMBRA ──
+      // ══════════════════════════════
+      // SIEMBRA
+      // ══════════════════════════════
       const RIESGO={'San Luis|Cz':138.88};
       const wsSiem=wb.Sheets['Avance de siembra'];
       const rowsSiem=wsSiem?X.utils.sheet_to_json(wsSiem,{header:1,defval:null}):[];
@@ -396,99 +247,129 @@ function generarPDFResumen(){
         siemMap[k].ha+=parseFloat(r[2])||0;
         siemMap[k].semb+=parseFloat(r[4])||0;
       }
-      const siemRows=Object.values(siemMap).sort((a,b)=>a.cult.localeCompare(b.cult)||a.campo.localeCompare(b.campo));
+      const cultLabel={'Cz':'Colza','Tr':'Trigo','Ceb':'Cebada'};
+      const cultColor={'Cz':[46,92,30],'Tr':[31,78,121],'Ceb':[180,80,20]};
+      const siemRows=Object.values(siemMap).sort((a,b)=>{
+        const ord={'Cz':0,'Tr':1,'Ceb':2};
+        return (ord[a.cult]??9)-(ord[b.cult]??9)||a.campo.localeCompare(b.campo);
+      });
       siemRows.forEach(s=>{
         const rk=s.campo+'|'+s.cult;
         s.riesgo=RIESGO[rk]||0;
-        s.efec=s.semb-s.riesgo;
+        s.efec=Math.max(0,s.semb-s.riesgo);
       });
-      const cultLabel={'Cz':'Colza','Tr':'Trigo','Ceb':'Cebada'};
-      const totS={ha:0,semb:0,riesgo:0,efec:0};
-      siemRows.forEach(s=>{totS.ha+=s.ha;totS.semb+=s.semb;totS.riesgo+=s.riesgo;totS.efec+=s.efec;});
-      const sPct=totS.ha>0?Math.round(totS.efec/totS.ha*100):0;
-      const sSembPct=totS.ha>0?Math.round(totS.semb/totS.ha*100):0;
+      const tS={ha:0,semb:0,riesgo:0,efec:0};
+      siemRows.forEach(s=>{tS.ha+=s.ha;tS.semb+=s.semb;tS.riesgo+=s.riesgo;tS.efec+=s.efec;});
+      const sPct=tS.ha>0?Math.round(tS.efec/tS.ha*100):0;
+      const sSembPct=tS.ha>0?Math.round(tS.semb/tS.ha*100):0;
 
-      // Summary banner siembra
-      doc.setFillColor(46,92,30);doc.roundedRect(M,y,CW,14,2,2,'F');
-      doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont('helvetica','bold');
-      doc.text('SIEMBRA INVIERNO 2026',M+4,y+6);
-      doc.setFontSize(9);doc.setFont('helvetica','normal');
-      doc.text('Efectivo: '+sPct+'%  ·  '+fN(totS.efec)+' / '+fN(totS.ha)+' ha',M+4,y+12);
-      if(totS.riesgo>0){
-        doc.setFontSize(9);doc.setFont('helvetica','bold');
-        doc.text('Sembrado: '+sSembPct+'%',M+CW/2,y+6);
-        doc.setFont('helvetica','normal');
-        doc.setTextColor(255,200,200);
-        doc.text('En resiembra: '+fN(totS.riesgo)+' ha',M+CW/2,y+12);
-      }
-      y+=18;
+      // Section label
+      doc.setFillColor(46,92,30);doc.roundedRect(M,y,CW,7,1,1,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+      doc.text('SIEMBRA INVIERNO 2026',M+3,y+5);
+      y+=10;
 
-      // Table header siembra
+      // KPI cards siembra - per cultivo
+      const cultivos=[...new Set(siemRows.map(s=>s.cult))];
+      const nCult=cultivos.length+1; // +1 for total
+      const sKW=(CW-(nCult-1)*2)/nCult;
+      const cultStats={};
+      cultivos.forEach(cv=>{
+        const rows=siemRows.filter(s=>s.cult===cv);
+        const ha=rows.reduce((s,r)=>s+r.ha,0);
+        const semb=rows.reduce((s,r)=>s+r.semb,0);
+        const riesgo=rows.reduce((s,r)=>s+r.riesgo,0);
+        const efec=Math.max(0,semb-riesgo);
+        cultStats[cv]={ha,semb,riesgo,efec,pctEfec:ha>0?Math.round(efec/ha*100):0,pctSemb:ha>0?Math.round(semb/ha*100):0};
+      });
+      [...cultivos,'TOT'].forEach((cv,i)=>{
+        const x=M+i*(sKW+2);
+        const isTotal=cv==='TOT';
+        const st=isTotal?{ha:tS.ha,efec:tS.efec,semb:tS.semb,riesgo:tS.riesgo,pctEfec:sPct,pctSemb:sSembPct}:cultStats[cv];
+        const col=isTotal?[46,92,30]:(cultColor[cv]||[80,80,80]);
+        doc.setFillColor(235,245,232);doc.roundedRect(x,y,sKW,22,2,2,'F');
+        doc.setFillColor(...col);doc.roundedRect(x,y,2,22,1,1,'F');
+        doc.setTextColor(80,80,80);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
+        doc.text(isTotal?'Total invierno':cultLabel[cv],x+4,y+5);
+        doc.setTextColor(...col);doc.setFontSize(14);doc.setFont('helvetica','bold');
+        doc.text(st.pctEfec+'%',x+4,y+14);
+        doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+        doc.text(fN(st.efec)+' / '+fN(st.ha)+' ha',x+4,y+20);
+        // Resiembra badge
+        if(st.riesgo>0){
+          doc.setTextColor(192,0,0);
+          doc.text('⚠ '+fN(st.riesgo)+' ha resiembra',x+4,y+20);
+        }
+      });
+      y+=27;
+
+      // Table siembra
+      const sCols=[
+        {t:'Campo',x:M,w:44,r:false},
+        {t:'Cultivo',x:M+46,w:18,r:false},
+        {t:'Ha',x:M+74,w:16,r:true},
+        {t:'Sembradas',x:M+102,w:22,r:true},
+        {t:'Resiembra',x:M+126,w:22,r:true},
+        {t:'Efectivas',x:M+150,w:20,r:true},
+        {t:'Avance',x:M+CW,w:0,r:true},
+      ];
       doc.setFillColor(215,235,210);doc.rect(M,y,CW,6,'F');
       doc.setTextColor(46,92,30);doc.setFontSize(7);doc.setFont('helvetica','bold');
-      const sth=[{t:'Campo',x:M+2},{t:'Cultivo',x:M+48},{t:'Ha',x:M+74,r:true},
-        {t:'Sembradas',x:M+100,r:true},{t:'Resiembra',x:M+124,r:true},
-        {t:'Efectivas',x:M+148,r:true},{t:'Av. efec.',x:M+CW,r:true}];
-      sth.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
+      sCols.forEach(col=>doc.text(col.t,col.r?col.x+col.w:col.x+2,y+4.5,col.r?{align:'right'}:{}));
       y+=7;
 
-      rowN=0;
-      // Group by cultivo for section breaks
-      const cultivos=[...new Set(siemRows.map(s=>s.cult))];
-      cultivos.forEach(cult=>{
-        const cultRows=siemRows.filter(s=>s.cult===cult);
-        // Mini section label
-        doc.setFillColor(235,245,232);doc.rect(M,y,CW,5,'F');
-        doc.setTextColor(46,92,30);doc.setFontSize(7);doc.setFont('helvetica','bold');
-        const cTotHa=cultRows.reduce((s,r)=>s+r.ha,0);
-        const cTotEfec=cultRows.reduce((s,r)=>s+r.efec,0);
-        const cTotSemb=cultRows.reduce((s,r)=>s+r.semb,0);
-        const cPctEfec=cTotHa>0?Math.round(cTotEfec/cTotHa*100):0;
-        const cPctSemb=cTotHa>0?Math.round(cTotSemb/cTotHa*100):0;
-        doc.text(cultLabel[cult]||cult,M+2,y+3.8);
-        const hasSombRiesgo=cultRows.some(r=>r.riesgo>0);
-        const cultInfo=hasSombRiesgo?
-          cPctEfec+'% efectivo ('+cPctSemb+'% sembrado)':
-          cPctEfec+'%';
-        doc.text(cultInfo,M+CW,y+3.8,{align:'right'});
-        y+=6;
-
-        cultRows.forEach(s=>{
-          const pctEfec=s.ha>0?Math.round(s.efec/s.ha*100):0;
-          const bg=rowN%2===0?[255,255,255]:[246,250,244];
-          doc.setFillColor(...bg);doc.rect(M,y,CW,6,'F');
-          doc.setTextColor(20,20,20);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
-          doc.text(s.campo+(s.riesgo>0?' ⚠':''),M+2,y+4.5);
-          doc.text(cultLabel[s.cult]||s.cult,M+48,y+4.5);
-          doc.text(fN(s.ha),M+74,y+4.5,{align:'right'});
-          doc.text(s.semb>0?fN(s.semb):'—',M+100,y+4.5,{align:'right'});
-          if(s.riesgo>0){doc.setTextColor(192,0,0);doc.setFont('helvetica','bold');}
-          doc.text(s.riesgo>0?fN(s.riesgo):'—',M+124,y+4.5,{align:'right'});
-          doc.setTextColor(20,20,20);doc.setFont('helvetica','normal');
-          doc.text(s.efec>0?fN(s.efec):'—',M+148,y+4.5,{align:'right'});
-          doc.text(pctEfec+'%',M+CW,y+4.5,{align:'right'});
-          y+=6;rowN++;
-          if(y>272){doc.addPage();y=14;}
-        });
+      rn=0;
+      siemRows.forEach(s=>{
+        const pctEfec=s.ha>0?Math.round(s.efec/s.ha*100):0;
+        const pctSemb=s.ha>0?Math.round(s.semb/s.ha*100):0;
+        doc.setFillColor(...(rn%2===0?[255,255,255]:[246,250,244]));doc.rect(M,y,CW,7,'F');
+        // Resiembra row: highlight left border
+        if(s.riesgo>0){doc.setFillColor(192,0,0);doc.rect(M,y,2,7,'F');}
+        doc.setTextColor(30,30,30);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+        doc.text(s.campo,M+3,y+5);
+        doc.text(cultLabel[s.cult]||s.cult,M+48,y+5);
+        doc.text(fN(s.ha),M+90,y+5,{align:'right'});
+        doc.text(s.semb>0?fN(s.semb):'—',M+124,y+5,{align:'right'});
+        if(s.riesgo>0){
+          doc.setTextColor(192,0,0);doc.setFont('helvetica','bold');
+          doc.text(fN(s.riesgo),M+148,y+5,{align:'right'});
+          doc.setTextColor(30,30,30);doc.setFont('helvetica','normal');
+          doc.text(fN(s.efec),M+170,y+5,{align:'right'});
+          // Show both pcts
+          doc.setTextColor(192,0,0);doc.setFontSize(6.5);
+          doc.text(pctSemb+'%→'+pctEfec+'%',M+CW,y+5,{align:'right'});
+        } else {
+          doc.text('—',M+148,y+5,{align:'right'});
+          doc.text(s.efec>0?fN(s.efec):'—',M+170,y+5,{align:'right'});
+          doc.setTextColor(s.efec>0?[30,30,30]:[160,160,160]);
+          doc.text(pctEfec>0?pctEfec+'%':'0%',M+CW,y+5,{align:'right'});
+        }
+        y+=7;rn++;
+        if(y>278){doc.addPage();y=14;}
       });
 
       // Total siembra
       doc.setFillColor(210,235,205);doc.rect(M,y,CW,7,'F');
       doc.setTextColor(46,92,30);doc.setFontSize(8);doc.setFont('helvetica','bold');
-      doc.text('TOTAL SIEMBRA',M+2,y+5);
-      doc.text(fN(totS.ha),M+74,y+5,{align:'right'});
-      doc.text(fN(totS.semb),M+100,y+5,{align:'right'});
-      if(totS.riesgo>0){doc.setTextColor(192,0,0);doc.text(fN(totS.riesgo),M+124,y+5,{align:'right'});}
+      doc.text('TOTAL',M+2,y+5);
+      doc.text(fN(tS.ha),M+90,y+5,{align:'right'});
+      doc.text(fN(tS.semb),M+124,y+5,{align:'right'});
+      if(tS.riesgo>0){doc.setTextColor(192,0,0);doc.text(fN(tS.riesgo),M+148,y+5,{align:'right'});}
       doc.setTextColor(46,92,30);
-      doc.text(fN(totS.efec),M+148,y+5,{align:'right'});
-      doc.text(sPct+'%',M+CW,y+5,{align:'right'});
+      doc.text(fN(tS.efec),M+170,y+5,{align:'right'});
+      if(tS.riesgo>0){
+        doc.setTextColor(192,0,0);doc.setFontSize(7);
+        doc.text(sSembPct+'%→'+sPct+'%',M+CW,y+5,{align:'right'});
+      } else {
+        doc.setTextColor(46,92,30);doc.text(sPct+'%',M+CW,y+5,{align:'right'});
+      }
 
       // Footer
-      doc.setTextColor(150,150,150);doc.setFontSize(7);doc.setFont('helvetica','normal');
-      doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha,W/2,290,{align:'center'});
+      doc.setTextColor(180,180,180);doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha,W/2,291,{align:'center'});
       doc.save('ResumenSemanal_'+fecha.replace(/\//g,'-')+'.pdf');
     })
-    .catch(e=>alert('Error: '+e.message))
+    .catch(e=>alert('Error: '+e.message+'\n'+e.stack))
     .finally(()=>{btn.textContent='⬇ PDF resumen';btn.disabled=false;});
 }
 </script>
