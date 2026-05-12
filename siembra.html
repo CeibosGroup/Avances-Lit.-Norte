@@ -246,12 +246,24 @@ fetch(XLSX_URL+'?t='+Date.now())
     const tot={ha:sc.ha+st.ha+seb.ha,efec:sc.efec+st.efec+seb.efec};
     tot.pct=tot.ha>0?Math.round(tot.efec/tot.ha*100):0;
 
+    // localStorage delta
+    const LS_KEY='siembra_snapshot';
+    let prev=null;
+    try{prev=JSON.parse(localStorage.getItem(LS_KEY));}catch(e){}
+    function deltaHa(curr,prevVal){ if(prevVal==null||curr==null)return null; const d=Math.round(curr-prevVal); return d===0?null:d; }
+    const dCz=prev?deltaHa(sc.efec,prev.czEfec):null;
+    const dTr=prev?deltaHa(st.efec,prev.trEfec):null;
+    const dCeb=prev?deltaHa(seb.efec,prev.cebEfec):null;
+    const dTot=prev?deltaHa(tot.efec,prev.totEfec):null;
+    try{localStorage.setItem(LS_KEY,JSON.stringify({czEfec:sc.efec,trEfec:st.efec,cebEfec:seb.efec,totEfec:tot.efec,ts:Date.now()}));}catch(e){}
+    function dbadge(val){ if(val==null)return''; const cls=val>0?'pos':'neg',arrow=val>0?'▲':'▼',sign=val>0?'+':''; return '<span class="'+cls+'" style="font-size:11px;font-weight:500;margin-left:4px">'+arrow+sign+val+' ha</span>'; }
+
     // KPIs
-    document.getElementById('kpis').innerHTML=`
-      <div class="kpi"><div class="kpi-label">Colza</div><div class="kpi-val">${sc.pct}%</div><div class="kpi-sub">${fmt(sc.efec)} / ${fmt(sc.ha)} ha</div></div>
-      <div class="kpi"><div class="kpi-label">Trigo</div><div class="kpi-val">${st.pct}%</div><div class="kpi-sub">${fmt(st.efec)} / ${fmt(st.ha)} ha</div></div>
-      <div class="kpi"><div class="kpi-label">Cebada</div><div class="kpi-val">${seb.pct}%</div><div class="kpi-sub">${fmt(seb.efec)} / ${fmt(seb.ha)} ha</div></div>
-      <div class="kpi"><div class="kpi-label">Total invierno</div><div class="kpi-val">${tot.pct}%</div><div class="kpi-sub">${fmt(tot.efec)} / ${fmt(tot.ha)} ha</div></div>`;
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="kpi-label">Colza</div><div class="kpi-val">'+sc.pct+'%'+dbadge(dCz)+'</div><div class="kpi-sub">'+fmt(sc.efec)+' / '+fmt(sc.ha)+' ha</div></div>'+
+      '<div class="kpi"><div class="kpi-label">Trigo</div><div class="kpi-val">'+st.pct+'%'+dbadge(dTr)+'</div><div class="kpi-sub">'+fmt(st.efec)+' / '+fmt(st.ha)+' ha</div></div>'+
+      '<div class="kpi"><div class="kpi-label">Cebada</div><div class="kpi-val">'+seb.pct+'%'+dbadge(dCeb)+'</div><div class="kpi-sub">'+fmt(seb.efec)+' / '+fmt(seb.ha)+' ha</div></div>'+
+      '<div class="kpi"><div class="kpi-label">Total invierno</div><div class="kpi-val">'+tot.pct+'%'+dbadge(dTot)+'</div><div class="kpi-sub">'+fmt(tot.efec)+' / '+fmt(tot.ha)+' ha</div></div>';
 
     // Donut
     const totalHaTot = sc.ha+st.ha+seb.ha;
