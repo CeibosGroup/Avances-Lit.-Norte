@@ -78,9 +78,6 @@
   .muted { color: #999; font-style: italic; }
   .loading { text-align: center; padding: 3rem 1rem; color: #6b6b6b; font-size: 14px; }
   .error { background: #fff0f0; border: 0.5px solid #f0c0c0; border-radius: 10px; padding: 1rem; color: #C00000; font-size: 13px; margin-bottom: 12px; }
-  .pdf-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:#2E5C1E; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:12px; -webkit-tap-highlight-color:transparent; }
-  .pdf-btn:active { opacity:0.85; }
-  @media print { .topbar{position:relative;} .pdf-btn{display:none;} body{background:#fff;} }
 </style>
 </head>
 <body>
@@ -93,7 +90,9 @@
   <div id="error-box" class="error" style="display:none"></div>
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
-    <button style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:#2E5C1E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent;" onclick="window.print()">⬇ Descargar PDF</button>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+    <button id="pdf-btn-siembra" onclick="generarPDFSiembra()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;background:rgba(46,92,30,0.1);color:#2E5C1E;border:0.5px solid rgba(46,92,30,0.3);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">⬇ PDF</button>
+  </div>
     <div class="kpi-row" id="kpis"></div>
     <div class="donut-card" id="donut-card"></div>
     <div id="blocks"></div>
@@ -303,6 +302,117 @@ fetch(XLSX_URL+'?t='+Date.now())
     eb.textContent='⚠ '+err.message+'. Verificá que avance.xlsx esté en el repositorio.';
     eb.style.display='block';
   });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+function generarPDFSiembra(){
+  const btn = document.getElementById('pdf-btn-siembra');
+  btn.textContent = '...'; btn.disabled = true;
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W = 210, margin = 14, colW = W - margin*2;
+    let y = 14;
+    const fecha = new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    // Header
+    doc.setFillColor(46,92,30);
+    doc.rect(0,0,W,18,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('Siembra Invierno 2026 — Litoral Norte', margin, 12);
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(fecha, W-margin, 12, {align:'right'});
+    y = 26;
+
+    // KPIs from DOM
+    const kpisEl = document.getElementById('kpis');
+    const kpis = kpisEl ? kpisEl.querySelectorAll('.kpi') : [];
+    const bw = colW/4;
+    kpis.forEach((k,i)=>{
+      const lbl = k.querySelector('.kpi-label')?.textContent?.trim()||'';
+      const val = k.querySelector('.kpi-val')?.childNodes[0]?.textContent?.trim()||'—';
+      const sub = k.querySelector('.kpi-sub')?.textContent?.trim()||'';
+      const x = margin + i*bw;
+      doc.setFillColor(245,245,240);
+      doc.roundedRect(x, y, bw-2, 18, 2, 2, 'F');
+      doc.setTextColor(100,100,100); doc.setFontSize(7); doc.setFont('helvetica','normal');
+      doc.text(lbl, x+3, y+5);
+      doc.setTextColor(20,20,20); doc.setFontSize(13); doc.setFont('helvetica','bold');
+      doc.text(val, x+3, y+13);
+      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100);
+      doc.text(sub, x+3, y+17);
+    });
+    y += 24;
+
+    // Tabla por cultivo → campo
+    const blocks = document.getElementById('blocks');
+    if(blocks){
+      const cultCards = blocks.querySelectorAll('.card');
+      cultCards.forEach(card=>{
+        const cultName = card.querySelector('.pill')?.textContent?.trim()||'';
+        const cultPct  = card.querySelector('.cult-pct')?.textContent?.trim()||'';
+        const cultMeta = card.querySelector('.cult-meta')?.textContent?.trim()||'';
+
+        // Section header
+        doc.setFillColor(46,92,30);
+        doc.roundedRect(margin, y, colW, 8, 1, 1, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        doc.text(cultName+' — '+cultPct, margin+3, y+5.5);
+        doc.setFontSize(7); doc.setFont('helvetica','normal');
+        doc.text(cultMeta.replace(/[▲▼]/g,'').trim(), W-margin-2, y+5.5, {align:'right'});
+        y += 10;
+
+        // Column headers
+        const tcols = [
+          {t:'Campo', x:margin+2, w:50},
+          {t:'Ha', x:margin+54, w:20, r:true},
+          {t:'Sembradas', x:margin+76, w:26, r:true},
+          {t:'Avance', x:margin+104, w:20, r:true},
+          {t:'Variedad', x:margin+126, w:56},
+        ];
+        doc.setFillColor(220,235,220);
+        doc.rect(margin, y, colW, 6, 'F');
+        doc.setTextColor(46,92,30); doc.setFontSize(7); doc.setFont('helvetica','bold');
+        tcols.forEach(col=>doc.text(col.t, col.r?col.x+col.w:col.x, y+4.5, col.r?{align:'right'}:{}));
+        y += 7;
+
+        // Campo rows from table cells
+        const campoRows = card.querySelectorAll('tbody tr');
+        let row=0;
+        campoRows.forEach(tr=>{
+          const tds = tr.querySelectorAll('td');
+          if(tds.length < 4) return;
+          const campo  = tds[0]?.textContent?.replace('⚠','').trim()||'';
+          const ha     = tds[1]?.textContent?.trim()||'—';
+          const semb   = tds[2]?.textContent?.replace(/[()]/g,'').trim()||'—';
+          const avPct  = tds[3]?.textContent?.replace(/[^0-9%]/g,'').trim()||'—';
+          const variedad = tds[4]?.textContent?.trim()||'—';
+
+          const bg = row%2===0?[255,255,255]:[248,248,245];
+          doc.setFillColor(...bg); doc.rect(margin, y, colW, 6, 'F');
+          doc.setTextColor(20,20,20); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+          doc.text(campo,   margin+2,  y+4.5);
+          doc.text(ha,      margin+74, y+4.5, {align:'right'});
+          doc.text(semb,    margin+102,y+4.5, {align:'right'});
+          doc.text(avPct,   margin+124,y+4.5, {align:'right'});
+          doc.text(variedad,margin+128,y+4.5);
+          y += 6; row++;
+          if(y > 270){ doc.addPage(); y=14; }
+        });
+        y += 4;
+        if(y > 270){ doc.addPage(); y=14; }
+      });
+    }
+
+    // Footer
+    doc.setTextColor(150,150,150); doc.setFontSize(7);
+    doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha, W/2, 290, {align:'center'});
+    doc.save('Siembra_LitoralNorte_'+fecha.replace(/\//g,'-')+'.pdf');
+  } catch(e) { alert('Error generando PDF: '+e.message); }
+  btn.textContent = '⬇ PDF'; btn.disabled = false;
+}
 </script>
 </body>
 </html>

@@ -80,14 +80,6 @@
   .proy-seg-proy { height:100%; background:#7AB3D9; }
   .proy-seg-pend { height:100%; background:#e8e8e4; border-radius:0 5px 5px 0; }
   .proy-bar-labels { display:flex; justify-content:space-between; font-size:10px; color:#6b6b6b; }
-  .pdf-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:#1F4E79; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:12px; -webkit-tap-highlight-color:transparent; }
-  .pdf-btn:active { opacity:0.85; }
-  @media print {
-    .topbar { position:relative; }
-    .pdf-btn { display:none; }
-    body { background:#fff; }
-    .card,.proy-card,.kpi { box-shadow:none; }
-  }
 </style>
 </head>
 <body>
@@ -100,8 +92,11 @@
   <div id="error-box" class="error" style="display:none"></div>
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
-    <button style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:#1F4E79;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent;" onclick="window.print()">⬇ Descargar PDF</button>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+    <button id="pdf-btn-cosecha" onclick="generarPDFCosecha()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;background:rgba(31,78,121,0.1);color:#1F4E79;border:0.5px solid rgba(31,78,121,0.3);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">⬇ PDF</button>
+  </div>
     <div class="kpi-row" id="kpis"></div>
+    <div id="proy-card" style="background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 16px;margin-bottom:12px;"></div>
     <div id="blocks"></div>
   </div>
 </div>
@@ -363,6 +358,181 @@ fetch(XLSX_URL+'?t='+Date.now())
     eb.textContent='⚠ '+err.message+'. Verificá que avance.xlsx esté en el repositorio.';
     eb.style.display='block';
   });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+function generarPDFCosecha(){
+  const btn = document.getElementById('pdf-btn-cosecha');
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W = 210, margin = 14, colW = W - margin*2;
+    let y = 14;
+    const fecha = new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    // ── Header ──
+    doc.setFillColor(31,78,121);
+    doc.rect(0,0,W,18,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('Cosecha Soja — Litoral Norte', margin, 12);
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(fecha, W-margin, 12, {align:'right'});
+    y = 26;
+
+    // ── KPI row helper ──
+    function kpiBox(x, bw, label, val, sub, subColor){
+      doc.setFillColor(245,245,240);
+      doc.roundedRect(x, y, bw-2, 18, 2, 2, 'F');
+      doc.setTextColor(100,100,100); doc.setFontSize(7); doc.setFont('helvetica','normal');
+      doc.text(label, x+3, y+5);
+      doc.setTextColor(20,20,20); doc.setFontSize(13); doc.setFont('helvetica','bold');
+      doc.text(String(val), x+3, y+13);
+      if(sub){
+        const rgb = subColor==='neg'?[192,0,0]:subColor==='pos'?[46,92,30]:[100,100,100];
+        doc.setTextColor(...rgb); doc.setFontSize(7); doc.setFont('helvetica','normal');
+        doc.text(String(sub), x+3, y+17);
+      }
+    }
+
+    // Global KPI box (full width)
+    const gEl = document.getElementById('kpis');
+    const kpis = gEl ? gEl.querySelectorAll('.kpi') : [];
+
+    // Read computed values from DOM
+    function kpiText(el){ return el ? el.querySelector('.kpi-val')?.textContent?.trim() : '—'; }
+    function kpiSub(el){ return el ? el.querySelector('.kpi-sub')?.textContent?.trim() : ''; }
+    function kpiLbl(el){ return el ? el.querySelector('.kpi-label')?.textContent?.trim() : ''; }
+
+    // Global summary bar
+    doc.setFillColor(31,78,121);
+    doc.roundedRect(margin, y, colW, 20, 2, 2, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+
+    // Get global values from first KPI block (the wide one)
+    const globalDiv = gEl?.querySelector('[style*="grid-column"]');
+    const avLabel = globalDiv?.querySelectorAll('.kpi-label')?.[0]?.textContent || 'Avance global';
+    const avVal   = globalDiv?.querySelectorAll('.kpi-val, [style*="24px"]');
+    const avText  = globalDiv ? (globalDiv.querySelectorAll('div[style*="24px"]')[0]?.textContent?.replace(/[▲▼]/g,'').trim() || '—') : '—';
+    const rnText  = globalDiv ? (globalDiv.querySelectorAll('div[style*="24px"]')[1]?.textContent?.replace(/[▲▼]/g,'').trim() || '—') : '—';
+    const haText  = globalDiv?.querySelector('.kpi-sub')?.textContent?.trim() || '';
+
+    doc.text('Avance: '+avText, margin+4, y+8);
+    doc.text('Rinde: '+rnText+' kg/ha', margin+4, y+15);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(haText, W-margin-2, y+11, {align:'right'});
+    y += 24;
+
+    // Sj1 / Sj2 KPIs
+    const kpiArr = Array.from(kpis).filter(k=>!k.style.gridColumn);
+    const bw = colW/4;
+    kpiArr.forEach((k,i)=>{
+      kpiBox(margin + i*bw, bw, kpiLbl(k), kpiText(k), kpiSub(k),
+        k.querySelector('.neg')?'neg':k.querySelector('.pos')?'pos':'');
+    });
+    y += 22;
+
+    // ── Proyección ──
+    const proyCard = document.getElementById('proy-card');
+    if(proyCard){
+      const pItems = proyCard.querySelectorAll('.proy-item');
+      if(pItems.length >= 2){
+        doc.setFillColor(240,239,233);
+        doc.roundedRect(margin, y, colW, 16, 2, 2, 'F');
+        doc.setTextColor(100,100,100); doc.setFontSize(7); doc.setFont('helvetica','normal');
+        doc.text('PROYECCIÓN FINAL DE CAMPAÑA', margin+3, y+5);
+        const p0v = pItems[0].querySelector('.proy-val')?.textContent?.trim() || '—';
+        const p0s = pItems[0].querySelector('.proy-sub')?.textContent?.trim() || '';
+        const p1v = pItems[1].querySelector('.proy-val')?.textContent?.trim() || '—';
+        const p1s = pItems[1].querySelector('.proy-sub')?.textContent?.trim() || '';
+        doc.setTextColor(20,20,20); doc.setFontSize(10); doc.setFont('helvetica','bold');
+        doc.text('Rinde proy.: '+p0v, margin+3, y+12);
+        doc.text('Producción: '+p1v, margin+colW/2+3, y+12);
+        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100);
+        doc.text(p0s, margin+3, y+16);
+        doc.text(p1s, margin+colW/2+3, y+16);
+        y += 20;
+      }
+    }
+
+    // ── Tabla por campo ──
+    doc.setFillColor(31,78,121);
+    doc.rect(margin, y, colW, 7, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    const cols = [{t:'Campo',x:margin+2,w:38},{t:'Cultivo',x:margin+40,w:16},{t:'Ha',x:margin+57,w:18,r:true},
+      {t:'Cosechadas',x:margin+76,w:22,r:true},{t:'Avance',x:margin+99,w:18,r:true},
+      {t:'Est. kg/ha',x:margin+118,w:22,r:true},{t:'Real kg/ha',x:margin+141,w:22,r:true},{t:'Desvío',x:margin+164,w:18,r:true}];
+    cols.forEach(col=>{ doc.text(col.t, col.r ? col.x+col.w : col.x, y+5, col.r?{align:'right'}:{}); });
+    y += 9;
+
+    // Parse campo-level data from DOM
+    const blocks = document.getElementById('blocks');
+    if(blocks){
+      const cultBlocks = blocks.querySelectorAll('.card');
+      let row = 0;
+      cultBlocks.forEach(cb=>{
+        const cultName = cb.querySelector('.pill')?.textContent?.trim() || '';
+        const campoRows = cb.querySelectorAll('.campo-row');
+        campoRows.forEach(cr=>{
+          if(cr.classList.contains('no-data')) return;
+          const tds = cr.querySelectorAll('span');
+          const campoNm = cr.querySelector('.campo-name')?.textContent?.trim() || '';
+          const pct     = cr.querySelector('.campo-pct')?.textContent?.trim() || '—';
+          const desv    = cr.querySelector('.campo-desv')?.textContent?.trim() || '—';
+          const meta    = cr.querySelector('.campo-rinde')?.textContent?.trim() || '—';
+
+          // Get ha from lote table
+          const loteTable = document.getElementById('lotes-'+cultName.replace(/\s/g,'').toLowerCase()+'-'+campoNm.replace(/\s/g,'').toLowerCase());
+          let haT='—',cosT='—',estT='—';
+          if(loteTable){
+            const rows2 = loteTable.querySelectorAll('tbody tr');
+            let sumHa=0,sumCos=0,sumEstW=0,sumEstH=0;
+            rows2.forEach(r2=>{
+              const tds2=r2.querySelectorAll('td');
+              const ha2=parseFloat((tds2[1]?.textContent||'0').replace(/\./g,'').replace(',','.'))||0;
+              const cos2=parseFloat((tds2[2]?.textContent||'0').replace(/\./g,'').replace(',','.'))||0;
+              const est2=parseFloat((tds2[4]?.textContent||'0').replace(/\./g,'').replace(',','.'))||0;
+              sumHa+=ha2; sumCos+=isNaN(cos2)?0:cos2; if(est2>0){sumEstW+=ha2*est2;sumEstH+=ha2;}
+            });
+            haT=sumHa>0?sumHa.toLocaleString('es-UY',{maximumFractionDigits:0}):'—';
+            cosT=sumCos>0?sumCos.toLocaleString('es-UY',{maximumFractionDigits:0}):'—';
+            estT=sumEstH>0?Math.round(sumEstW/sumEstH).toLocaleString('es-UY'):'—';
+          }
+
+          const bg = row%2===0?[255,255,255]:[248,248,245];
+          doc.setFillColor(...bg); doc.rect(margin, y, colW, 7, 'F');
+          doc.setTextColor(20,20,20); doc.setFontSize(8); doc.setFont('helvetica','normal');
+          doc.text(campoNm, margin+2, y+5);
+          doc.text(cultName, margin+40, y+5);
+          doc.text(haT, margin+75, y+5, {align:'right'});
+          doc.text(cosT, margin+98, y+5, {align:'right'});
+          doc.text(pct, margin+117, y+5, {align:'right'});
+          doc.text(estT, margin+140, y+5, {align:'right'});
+          doc.text(meta.replace('kg/ha','').trim(), margin+163, y+5, {align:'right'});
+          const dColor = desv.startsWith('-')?[192,0,0]:desv.startsWith('+')||(!desv.startsWith('-')&&desv!=='—')?[46,92,30]:[100,100,100];
+          doc.setTextColor(...dColor);
+          doc.text(desv, margin+colW, y+5, {align:'right'});
+          y += 7; row++;
+          if(y > 270){ doc.addPage(); y=14; }
+        });
+      });
+    }
+
+    // Footer
+    doc.setTextColor(150,150,150); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha, W/2, 290, {align:'center'});
+
+    doc.save('Cosecha_LitoralNorte_'+fecha.replace(/\//g,'-')+'.pdf');
+  } catch(e) {
+    alert('Error generando PDF: '+e.message);
+  }
+  btn.textContent = '⬇ PDF';
+  btn.disabled = false;
+}
 </script>
 </body>
 </html>
