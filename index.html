@@ -47,6 +47,9 @@
   .btn-sub   { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .pulsing { animation: pulse 1.5s infinite; }
+  .pdf-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:#2E5C1E; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; margin-top:16px; -webkit-tap-highlight-color:transparent; }
+  .pdf-btn:active { opacity:0.85; }
+  @media print { .pdf-btn{display:none;} body{background:#fff;} .btn{box-shadow:none;} }
 </style>
 </head>
 <body>
@@ -68,6 +71,7 @@
       <div><div class="btn-label">Siembra</div><div class="btn-sub">Invierno 2026</div></div>
     </a>
   </div>
+  <button class="pdf-btn" onclick="window.print()">⬇ Descargar PDF</button>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>

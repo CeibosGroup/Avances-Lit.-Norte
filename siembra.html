@@ -78,6 +78,9 @@
   .muted { color: #999; font-style: italic; }
   .loading { text-align: center; padding: 3rem 1rem; color: #6b6b6b; font-size: 14px; }
   .error { background: #fff0f0; border: 0.5px solid #f0c0c0; border-radius: 10px; padding: 1rem; color: #C00000; font-size: 13px; margin-bottom: 12px; }
+  .pdf-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:#2E5C1E; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:12px; -webkit-tap-highlight-color:transparent; }
+  .pdf-btn:active { opacity:0.85; }
+  @media print { .topbar{position:relative;} .pdf-btn{display:none;} body{background:#fff;} }
 </style>
 </head>
 <body>
@@ -90,6 +93,7 @@
   <div id="error-box" class="error" style="display:none"></div>
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
+    <button style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:#2E5C1E;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent;" onclick="window.print()">⬇ Descargar PDF</button>
     <div class="kpi-row" id="kpis"></div>
     <div class="donut-card" id="donut-card"></div>
     <div id="blocks"></div>

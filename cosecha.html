@@ -67,6 +67,27 @@
   .muted { color: #999; font-style: italic; }
   .loading { text-align: center; padding: 3rem 1rem; color: #6b6b6b; font-size: 14px; }
   .error { background: #fff0f0; border: 0.5px solid #f0c0c0; border-radius: 10px; padding: 1rem; color: #C00000; font-size: 13px; margin-bottom: 12px; }
+  .proy-card { background:#fff; border:0.5px solid rgba(0,0,0,0.1); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .proy-title { font-size:11px;font-weight:500;color:#6b6b6b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px; }
+  .proy-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .proy-item { background:#f0efe9; border-radius:8px; padding:10px 12px; }
+  .proy-label { font-size:11px; color:#6b6b6b; margin-bottom:2px; }
+  .proy-val { font-size:18px; font-weight:600; color:#1a1a1a; }
+  .proy-sub { font-size:11px; color:#6b6b6b; margin-top:2px; }
+  .proy-bar-wrap { margin-top:10px; }
+  .proy-bar-track { height:10px; background:#e8e8e4; border-radius:5px; overflow:visible; position:relative; display:flex; margin-bottom:4px; }
+  .proy-seg-real { height:100%; background:#1F4E79; border-radius:5px 0 0 5px; }
+  .proy-seg-proy { height:100%; background:#7AB3D9; }
+  .proy-seg-pend { height:100%; background:#e8e8e4; border-radius:0 5px 5px 0; }
+  .proy-bar-labels { display:flex; justify-content:space-between; font-size:10px; color:#6b6b6b; }
+  .pdf-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:#1F4E79; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:12px; -webkit-tap-highlight-color:transparent; }
+  .pdf-btn:active { opacity:0.85; }
+  @media print {
+    .topbar { position:relative; }
+    .pdf-btn { display:none; }
+    body { background:#fff; }
+    .card,.proy-card,.kpi { box-shadow:none; }
+  }
 </style>
 </head>
 <body>
@@ -79,6 +100,7 @@
   <div id="error-box" class="error" style="display:none"></div>
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
+    <button style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:#1F4E79;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent;" onclick="window.print()">⬇ Descargar PDF</button>
     <div class="kpi-row" id="kpis"></div>
     <div id="blocks"></div>
   </div>
@@ -244,39 +266,90 @@ fetch(XLSX_URL+'?t='+Date.now())
     // Guardar snapshot actual
     try { localStorage.setItem(LS_KEY, JSON.stringify({gCos, gRinde, ts: Date.now()})); } catch(e){}
 
+    // ── Proyección de rinde final ──
+    // Desvío % global observado
+    const desvPct = (gRinde && gEst) ? (gRinde - gEst) / gEst : 0;
+    // Producción real cosechada (tn)
+    const prodReal = gRinde && gCos ? gRinde * gCos : 0;
+    // Ha pendientes y su estimado ponderado
+    const lotePend = allL.filter(l => l.hacos < l.ha);
+    let pendEstHa = 0, pendEst = 0;
+    for(const l of lotePend){
+      const haPend = l.ha - l.hacos;
+      if(haPend > 0 && l.estRinde > 0){ pendEstHa += haPend; pendEst += haPend * l.estRinde; }
+    }
+    const pendEstRinde = pendEstHa > 0 ? pendEst / pendEstHa : (gEst || 0);
+    // Rinde proyectado pendiente = estimado corregido por desvío observado
+    const pendProyRinde = pendEstRinde * (1 + desvPct);
+    const prodPend = pendProyRinde * haPendientes;
+    // Rinde final proyectado = (prod real + prod pendiente proyectada) / ha total
+    const rindeProyFinal = gHa > 0 ? Math.round((prodReal + prodPend) / gHa) : null;
+    // Producción total proyectada en tn
+    const prodTotalProy = gHa > 0 ? Math.round((prodReal + prodPend) / 1000) : null;
+    const desvProyVsEst = rindeProyFinal && gEst ? Math.round(rindeProyFinal - gEst) : null;
+
     // Helpers para badges
     function deltaBadge(val, unit=''){
       if(val==null) return '';
       const cls = val>0?'pos':val<0?'neg':'';
       const arrow = val>0?'▲':val<0?'▼':'';
       const sign = val>0?'+':'';
-      return `<span class="${cls}" style="font-size:11px;font-weight:500;margin-left:6px">${arrow} ${sign}${val}${unit}</span>`;
+      return '<span class="'+cls+'" style="font-size:11px;font-weight:500;margin-left:6px">'+arrow+' '+sign+val+unit+'</span>';
     }
     function diasBadge(dias, haD){
       if(dias==null) return '';
-      const label = dias<=0 ? '¡Cosecha completa!' : dias===1 ? '1 día restante' : `~${dias} días restantes`;
+      const label = dias<=0 ? '¡Cosecha completa!' : dias===1 ? '1 día restante' : '~'+dias+' días restantes';
       const color = dias<=3?'#C00000':dias<=7?'#B8860B':'#2E5C1E';
-      return `<div style="margin-top:6px;font-size:11px;color:${color};font-weight:500">${label} <span style="color:#6b6b6b;font-weight:400">(${fmt(haD)} ha/día)</span></div>`;
+      return '<div style="margin-top:6px;font-size:11px;color:'+color+';font-weight:500">'+label+' <span style="color:#6b6b6b;font-weight:400">('+fmt(haD)+' ha/día)</span></div>';
     }
 
-    document.getElementById('kpis').innerHTML=`
-      <div class="kpi" style="grid-column:1/-1;background:#f0efe9;display:flex;align-items:center;gap:16px;padding:12px 14px;">
-        <div style="flex:1">
-          <div class="kpi-label">Avance global</div>
-          <div style="font-size:24px;font-weight:600;margin:2px 0">${gPct}% ${deltaBadge(deltaHa,' ha')}</div>
-          <div class="kpi-sub">${fmt(gCos)} / ${fmt(gHa)} ha cosechadas</div>
-          ${diasBadge(diasRestantes, haDia)}
-        </div>
-        <div style="text-align:right">
-          <div class="kpi-label">Rinde global</div>
-          <div style="font-size:24px;font-weight:600;margin:2px 0">${gRinde?fmt(gRinde):'—'} ${deltaBadge(deltaRinde,' kg/ha')}</div>
-          <div class="kpi-sub ${desvClass(gDesv)}">${gDesv!=null?desvStr(gDesv)+' kg/ha vs est.':'—'}</div>
-        </div>
-      </div>
-      <div class="kpi"><div class="kpi-label">Sj1 avance</div><div class="kpi-val">${Math.round(s1.avPct*100)}%</div><div class="kpi-sub" style="color:#6b6b6b">${fmt(s1.cos)} / ${fmt(s1.ha)} ha</div></div>
-      <div class="kpi"><div class="kpi-label">Sj1 rinde</div><div class="kpi-val">${s1.rinde?fmt(s1.rinde):'—'}</div><div class="kpi-sub ${desvClass(s1.desv)}">${s1.desv!=null?desvStr(s1.desv)+' kg/ha':'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">Sj2 avance</div><div class="kpi-val">${Math.round(s2.avPct*100)}%</div><div class="kpi-sub" style="color:#6b6b6b">${fmt(s2.cos)} / ${fmt(s2.ha)} ha</div></div>
-      <div class="kpi"><div class="kpi-label">Sj2 rinde</div><div class="kpi-val">${s2.rinde?fmt(s2.rinde):'—'}</div><div class="kpi-sub ${desvClass(s2.desv)}">${s2.desv!=null?desvStr(s2.desv)+' kg/ha':'—'}</div></div>`;
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi" style="grid-column:1/-1;background:#f0efe9;display:flex;align-items:center;gap:16px;padding:12px 14px;">'+
+        '<div style="flex:1">'+
+          '<div class="kpi-label">Avance global</div>'+
+          '<div style="font-size:24px;font-weight:600;margin:2px 0">'+gPct+'% '+deltaBadge(deltaHa,' ha')+'</div>'+
+          '<div class="kpi-sub">'+fmt(gCos)+' / '+fmt(gHa)+' ha cosechadas</div>'+
+          diasBadge(diasRestantes, haDia)+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div class="kpi-label">Rinde global</div>'+
+          '<div style="font-size:24px;font-weight:600;margin:2px 0">'+(gRinde?fmt(gRinde):'—')+' '+deltaBadge(deltaRinde,' kg/ha')+'</div>'+
+          '<div class="kpi-sub '+(gDesv<0?'neg':gDesv>0?'pos':'')+'">'+(gDesv!=null?desvStr(gDesv)+' kg/ha vs est.':'—')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="kpi"><div class="kpi-label">Sj1 avance</div><div class="kpi-val">'+Math.round(s1.avPct*100)+'%</div><div class="kpi-sub" style="color:#6b6b6b">'+fmt(s1.cos)+' / '+fmt(s1.ha)+' ha</div></div>'+
+      '<div class="kpi"><div class="kpi-label">Sj1 rinde</div><div class="kpi-val">'+(s1.rinde?fmt(s1.rinde):'—')+'</div><div class="kpi-sub '+(s1.desv<0?'neg':s1.desv>0?'pos':'')+'">'+(s1.desv!=null?desvStr(s1.desv)+' kg/ha':'—')+'</div></div>'+
+      '<div class="kpi"><div class="kpi-label">Sj2 avance</div><div class="kpi-val">'+Math.round(s2.avPct*100)+'%</div><div class="kpi-sub" style="color:#6b6b6b">'+fmt(s2.cos)+' / '+fmt(s2.ha)+' ha</div></div>'+
+      '<div class="kpi"><div class="kpi-label">Sj2 rinde</div><div class="kpi-val">'+(s2.rinde?fmt(s2.rinde):'—')+'</div><div class="kpi-sub '+(s2.desv<0?'neg':s2.desv>0?'pos':'')+'">'+(s2.desv!=null?desvStr(s2.desv)+' kg/ha':'—')+'</div></div>';
+
+    // ── Tarjeta de proyección ──
+    const pctReal = gHa>0?Math.round(gCos/gHa*100):0;
+    const pctPend = 100-pctReal;
+    document.getElementById('proy-card').innerHTML=
+      '<div class="proy-title">Proyección de rinde final de campaña</div>'+
+      '<div class="proy-grid">'+
+        '<div class="proy-item">'+
+          '<div class="proy-label">Rinde proyectado final</div>'+
+          '<div class="proy-val">'+(rindeProyFinal?fmt(rindeProyFinal):'—')+' <span style="font-size:13px;font-weight:400">kg/ha</span></div>'+
+          '<div class="proy-sub '+(desvProyVsEst<0?'neg':desvProyVsEst>0?'pos':'')+'">'+(desvProyVsEst!=null?(desvProyVsEst>=0?'+':'')+fmt(desvProyVsEst)+' kg/ha vs est.':'—')+'</div>'+
+        '</div>'+
+        '<div class="proy-item">'+
+          '<div class="proy-label">Producción total proyectada</div>'+
+          '<div class="proy-val">'+(prodTotalProy?fmt(prodTotalProy):'—')+' <span style="font-size:13px;font-weight:400">tn</span></div>'+
+          '<div class="proy-sub">Desvío aplicado: '+(desvPct>=0?'+':'')+(desvPct*100).toFixed(1)+'%</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="proy-bar-wrap">'+
+        '<div class="proy-bar-track">'+
+          '<div class="proy-seg-real" style="width:'+pctReal+'%" title="Cosechado: '+fmt(gCos)+' ha"></div>'+
+          '<div class="proy-seg-proy" style="width:'+pctPend+'%" title="Pendiente proyectado: '+fmt(Math.round(haPendientes))+' ha"></div>'+
+        '</div>'+
+        '<div class="proy-bar-labels">'+
+          '<span style="color:#1F4E79;font-weight:500">■ Cosechado '+pctReal+'%</span>'+
+          '<span style="color:#7AB3D9;font-weight:500">■ Pendiente '+pctPend+'%</span>'+
+        '</div>'+
+        '<div style="font-size:11px;color:#6b6b6b;margin-top:6px">Pendiente: est. '+fmt(Math.round(pendEstRinde))+' kg/ha → proyectado '+fmt(Math.round(pendProyRinde))+' kg/ha (corrección '+( desvPct>=0?'+':'')+(desvPct*100).toFixed(1)+'%)</div>'+
+      '</div>';
     const blocks=document.getElementById('blocks');
     blocks.appendChild(buildBlock('Sj1',sj1,'bar-sj1','pill-sj1'));
     blocks.appendChild(buildBlock('Sj2',sj2,'bar-sj2','pill-sj2'));
