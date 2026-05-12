@@ -73,7 +73,6 @@
     <button id="pdf-btn-index" onclick="generarPDFResumen()" style="display:flex;align-items:center;gap:5px;padding:6px 14px;background:rgba(46,92,30,0.1);color:#2E5C1E;border:0.5px solid rgba(46,92,30,0.3);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;">⬇ PDF resumen</button>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 fetch('avance.xlsx?t='+Date.now()).then(r=>r.arrayBuffer()).then(()=>{
   const d = new Date();
@@ -87,7 +86,6 @@ fetch('avance.xlsx?t='+Date.now()).then(r=>r.arrayBuffer()).then(()=>{
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 function generarPDFResumen(){
   const btn = document.getElementById('pdf-btn-index');
@@ -260,6 +258,235 @@ function generarPDFResumen(){
       doc.setTextColor(150,150,150);doc.setFontSize(7);doc.setFont('helvetica','normal');
       doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha,W/2,290,{align:'center'});
       doc.save('ResumenSemanal_LitoralNorte_'+fecha.replace(/\//g,'-')+'.pdf');
+    })
+    .catch(e=>alert('Error: '+e.message))
+    .finally(()=>{btn.textContent='⬇ PDF resumen';btn.disabled=false;});
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+function generarPDFResumen(){
+  const btn=document.getElementById('pdf-btn-index');
+  btn.textContent='...';btn.disabled=true;
+  fetch('avance.xlsx?t='+Date.now())
+    .then(r=>r.arrayBuffer())
+    .then(buf=>{
+      const X=window.XLSX||XLSX;
+      const wb=X.read(buf,{type:'array'});
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      const W=210,M=14,CW=W-M*2;
+      let y=14;
+      const fecha=new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
+      const fN=(n,d=0)=>n==null||isNaN(n)?'—':Number(n).toLocaleString('es-UY',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+      // ── Header ──
+      doc.setFillColor(46,92,30);doc.rect(0,0,W,20,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(14);doc.setFont('helvetica','bold');
+      doc.text('Resumen Semanal — Litoral Norte',M,9);
+      doc.setFontSize(8);doc.setFont('helvetica','normal');
+      doc.text('Ceibos Group Uruguay · Campaña 2025/26',M,15);
+      doc.text(fecha,W-M,15,{align:'right'});
+      y=26;
+
+      // ── COSECHA ──
+      const wsCos=wb.Sheets['Avance cosecha'];
+      const rowsCos=wsCos?X.utils.sheet_to_json(wsCos,{header:1,defval:null}):[];
+      // Group by campo+cultivo
+      const cosMap={};
+      for(let i=1;i<rowsCos.length;i++){
+        const r=rowsCos[i];
+        if(!r[0]||typeof r[0]!=='string'||r[0].startsWith('RESUMEN'))break;
+        const cultV=String(r[5]||'').trim();
+        if(!cultV)continue;
+        const k=r[0]+'||'+cultV;
+        if(!cosMap[k])cosMap[k]={campo:r[0],cultV,ha:0,hacos:0,prod:0,estProd:0,estHa:0};
+        const ha=parseFloat(r[2])||0,hacos=parseFloat(r[10])||0,rinde=parseFloat(r[11])||0,estR=parseFloat(r[9])||0;
+        cosMap[k].ha+=ha;cosMap[k].hacos+=hacos;
+        if(hacos>0&&rinde>0)cosMap[k].prod+=hacos*rinde;
+        if(ha>0&&estR>0){cosMap[k].estProd+=ha*estR;cosMap[k].estHa+=ha;}
+      }
+      const cosRows=Object.values(cosMap).sort((a,b)=>a.cultV.localeCompare(b.cultV)||a.campo.localeCompare(b.campo));
+      const totC={ha:0,hacos:0,prod:0,estProd:0,estHa:0};
+      cosRows.forEach(r=>{totC.ha+=r.ha;totC.hacos+=r.hacos;totC.prod+=r.prod;totC.estProd+=r.estProd;totC.estHa+=r.estHa;});
+      const gR=totC.hacos>0?Math.round(totC.prod/totC.hacos):0;
+      const gE=totC.estHa>0?Math.round(totC.estProd/totC.estHa):0;
+      const gPct=totC.ha>0?Math.round(totC.hacos/totC.ha*100):0;
+      const gDesv=gR&&gE?gR-gE:null;
+      const gDesvPct=gDesv&&gE?(gDesv/gE*100):null;
+
+      // Summary banner cosecha
+      doc.setFillColor(31,78,121);doc.roundedRect(M,y,CW,14,2,2,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont('helvetica','bold');
+      doc.text('COSECHA SOJA',M+4,y+6);
+      doc.setFontSize(9);doc.setFont('helvetica','normal');
+      doc.text('Avance: '+gPct+'%  ·  '+fN(totC.hacos)+' / '+fN(totC.ha)+' ha',M+4,y+12);
+      doc.setFontSize(10);doc.setFont('helvetica','bold');
+      doc.text('Rinde: '+fN(gR)+' kg/ha',M+CW/2,y+6);
+      doc.setFontSize(9);doc.setFont('helvetica','normal');
+      const desvTxt=gDesv!=null?(gDesv>=0?'+':'')+fN(gDesv)+' kg/ha ('+(gDesvPct>=0?'+':'')+gDesvPct.toFixed(1)+'%) vs est.':'—';
+      const dCol=gDesv<0?[255,180,180]:gDesv>0?[180,255,180]:[200,200,200];
+      doc.setTextColor(...dCol);doc.text(desvTxt,M+CW/2,y+12);
+      y+=18;
+
+      // Table header
+      doc.setFillColor(220,230,245);doc.rect(M,y,CW,6,'F');
+      doc.setTextColor(31,78,121);doc.setFontSize(7);doc.setFont('helvetica','bold');
+      const cth=[{t:'Campo',x:M+2},{t:'Cult.',x:M+44},{t:'Ha',x:M+62,r:true},
+        {t:'Cosech.',x:M+82,r:true},{t:'Av.',x:M+96,r:true},{t:'Rinde',x:M+114,r:true},
+        {t:'Desv. kg',x:M+134,r:true},{t:'Desv. %',x:M+CW,r:true}];
+      cth.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
+      y+=7;
+
+      let rowN=0;
+      cosRows.forEach(r=>{
+        const rinde=r.hacos>0?Math.round(r.prod/r.hacos):0;
+        const est=r.estHa>0?Math.round(r.estProd/r.estHa):0;
+        const pct=r.ha>0?Math.round(r.hacos/r.ha*100):0;
+        const desv=rinde&&est?rinde-est:null;
+        const desvPct=desv&&est?(desv/est*100):null;
+        doc.setFillColor(...(rowN%2===0?[255,255,255]:[246,249,253]));doc.rect(M,y,CW,6,'F');
+        doc.setTextColor(20,20,20);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+        doc.text(r.campo,M+2,y+4.5);
+        doc.text(r.cultV,M+44,y+4.5);
+        doc.text(fN(r.ha),M+62,y+4.5,{align:'right'});
+        doc.text(r.hacos>0?fN(r.hacos):'—',M+82,y+4.5,{align:'right'});
+        doc.text(pct+'%',M+96,y+4.5,{align:'right'});
+        doc.text(rinde>0?fN(rinde):'—',M+114,y+4.5,{align:'right'});
+        if(desv!=null){
+          const dc=desv<0?[192,0,0]:[46,92,30];
+          doc.setTextColor(...dc);doc.setFont('helvetica','bold');
+          doc.text((desv>=0?'+':'')+fN(desv),M+134,y+4.5,{align:'right'});
+          doc.text((desvPct>=0?'+':'')+desvPct.toFixed(1)+'%',M+CW,y+4.5,{align:'right'});
+        }
+        y+=6;rowN++;
+        if(y>272){doc.addPage();y=14;}
+      });
+      // Total row
+      doc.setFillColor(210,225,245);doc.rect(M,y,CW,7,'F');
+      doc.setTextColor(31,78,121);doc.setFontSize(8);doc.setFont('helvetica','bold');
+      doc.text('TOTAL COSECHA',M+2,y+5);
+      doc.text(fN(totC.ha),M+62,y+5,{align:'right'});
+      doc.text(fN(totC.hacos),M+82,y+5,{align:'right'});
+      doc.text(gPct+'%',M+96,y+5,{align:'right'});
+      doc.text(fN(gR),M+114,y+5,{align:'right'});
+      if(gDesv!=null){
+        doc.setTextColor(...(gDesv<0?[192,0,0]:[46,92,30]));
+        doc.text((gDesv>=0?'+':'')+fN(gDesv),M+134,y+5,{align:'right'});
+        doc.text((gDesvPct>=0?'+':'')+gDesvPct.toFixed(1)+'%',M+CW,y+5,{align:'right'});
+      }
+      y+=12;
+      if(y>240){doc.addPage();y=14;}
+
+      // ── SIEMBRA ──
+      const RIESGO={'San Luis|Cz':138.88};
+      const wsSiem=wb.Sheets['Avance de siembra'];
+      const rowsSiem=wsSiem?X.utils.sheet_to_json(wsSiem,{header:1,defval:null}):[];
+      const siemMap={};
+      for(let i=1;i<rowsSiem.length;i++){
+        const r=rowsSiem[i];
+        if(!r[0]||typeof r[0]!=='string'||r[0].startsWith('RESUMEN'))break;
+        const cult=String(r[3]||'').trim();
+        if(!['Cz','Tr','Ceb'].includes(cult))continue;
+        const k=r[0]+'||'+cult;
+        if(!siemMap[k])siemMap[k]={campo:r[0],cult,ha:0,semb:0};
+        siemMap[k].ha+=parseFloat(r[2])||0;
+        siemMap[k].semb+=parseFloat(r[4])||0;
+      }
+      const siemRows=Object.values(siemMap).sort((a,b)=>a.cult.localeCompare(b.cult)||a.campo.localeCompare(b.campo));
+      siemRows.forEach(s=>{
+        const rk=s.campo+'|'+s.cult;
+        s.riesgo=RIESGO[rk]||0;
+        s.efec=s.semb-s.riesgo;
+      });
+      const cultLabel={'Cz':'Colza','Tr':'Trigo','Ceb':'Cebada'};
+      const totS={ha:0,semb:0,riesgo:0,efec:0};
+      siemRows.forEach(s=>{totS.ha+=s.ha;totS.semb+=s.semb;totS.riesgo+=s.riesgo;totS.efec+=s.efec;});
+      const sPct=totS.ha>0?Math.round(totS.efec/totS.ha*100):0;
+      const sSembPct=totS.ha>0?Math.round(totS.semb/totS.ha*100):0;
+
+      // Summary banner siembra
+      doc.setFillColor(46,92,30);doc.roundedRect(M,y,CW,14,2,2,'F');
+      doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont('helvetica','bold');
+      doc.text('SIEMBRA INVIERNO 2026',M+4,y+6);
+      doc.setFontSize(9);doc.setFont('helvetica','normal');
+      doc.text('Efectivo: '+sPct+'%  ·  '+fN(totS.efec)+' / '+fN(totS.ha)+' ha',M+4,y+12);
+      if(totS.riesgo>0){
+        doc.setFontSize(9);doc.setFont('helvetica','bold');
+        doc.text('Sembrado: '+sSembPct+'%',M+CW/2,y+6);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(255,200,200);
+        doc.text('En resiembra: '+fN(totS.riesgo)+' ha',M+CW/2,y+12);
+      }
+      y+=18;
+
+      // Table header siembra
+      doc.setFillColor(215,235,210);doc.rect(M,y,CW,6,'F');
+      doc.setTextColor(46,92,30);doc.setFontSize(7);doc.setFont('helvetica','bold');
+      const sth=[{t:'Campo',x:M+2},{t:'Cultivo',x:M+48},{t:'Ha',x:M+74,r:true},
+        {t:'Sembradas',x:M+100,r:true},{t:'Resiembra',x:M+124,r:true},
+        {t:'Efectivas',x:M+148,r:true},{t:'Av. efec.',x:M+CW,r:true}];
+      sth.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
+      y+=7;
+
+      rowN=0;
+      // Group by cultivo for section breaks
+      const cultivos=[...new Set(siemRows.map(s=>s.cult))];
+      cultivos.forEach(cult=>{
+        const cultRows=siemRows.filter(s=>s.cult===cult);
+        // Mini section label
+        doc.setFillColor(235,245,232);doc.rect(M,y,CW,5,'F');
+        doc.setTextColor(46,92,30);doc.setFontSize(7);doc.setFont('helvetica','bold');
+        const cTotHa=cultRows.reduce((s,r)=>s+r.ha,0);
+        const cTotEfec=cultRows.reduce((s,r)=>s+r.efec,0);
+        const cTotSemb=cultRows.reduce((s,r)=>s+r.semb,0);
+        const cPctEfec=cTotHa>0?Math.round(cTotEfec/cTotHa*100):0;
+        const cPctSemb=cTotHa>0?Math.round(cTotSemb/cTotHa*100):0;
+        doc.text(cultLabel[cult]||cult,M+2,y+3.8);
+        const hasSombRiesgo=cultRows.some(r=>r.riesgo>0);
+        const cultInfo=hasSombRiesgo?
+          cPctEfec+'% efectivo ('+cPctSemb+'% sembrado)':
+          cPctEfec+'%';
+        doc.text(cultInfo,M+CW,y+3.8,{align:'right'});
+        y+=6;
+
+        cultRows.forEach(s=>{
+          const pctEfec=s.ha>0?Math.round(s.efec/s.ha*100):0;
+          const bg=rowN%2===0?[255,255,255]:[246,250,244];
+          doc.setFillColor(...bg);doc.rect(M,y,CW,6,'F');
+          doc.setTextColor(20,20,20);doc.setFontSize(7.5);doc.setFont('helvetica','normal');
+          doc.text(s.campo+(s.riesgo>0?' ⚠':''),M+2,y+4.5);
+          doc.text(cultLabel[s.cult]||s.cult,M+48,y+4.5);
+          doc.text(fN(s.ha),M+74,y+4.5,{align:'right'});
+          doc.text(s.semb>0?fN(s.semb):'—',M+100,y+4.5,{align:'right'});
+          if(s.riesgo>0){doc.setTextColor(192,0,0);doc.setFont('helvetica','bold');}
+          doc.text(s.riesgo>0?fN(s.riesgo):'—',M+124,y+4.5,{align:'right'});
+          doc.setTextColor(20,20,20);doc.setFont('helvetica','normal');
+          doc.text(s.efec>0?fN(s.efec):'—',M+148,y+4.5,{align:'right'});
+          doc.text(pctEfec+'%',M+CW,y+4.5,{align:'right'});
+          y+=6;rowN++;
+          if(y>272){doc.addPage();y=14;}
+        });
+      });
+
+      // Total siembra
+      doc.setFillColor(210,235,205);doc.rect(M,y,CW,7,'F');
+      doc.setTextColor(46,92,30);doc.setFontSize(8);doc.setFont('helvetica','bold');
+      doc.text('TOTAL SIEMBRA',M+2,y+5);
+      doc.text(fN(totS.ha),M+74,y+5,{align:'right'});
+      doc.text(fN(totS.semb),M+100,y+5,{align:'right'});
+      if(totS.riesgo>0){doc.setTextColor(192,0,0);doc.text(fN(totS.riesgo),M+124,y+5,{align:'right'});}
+      doc.setTextColor(46,92,30);
+      doc.text(fN(totS.efec),M+148,y+5,{align:'right'});
+      doc.text(sPct+'%',M+CW,y+5,{align:'right'});
+
+      // Footer
+      doc.setTextColor(150,150,150);doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha,W/2,290,{align:'center'});
+      doc.save('ResumenSemanal_'+fecha.replace(/\//g,'-')+'.pdf');
     })
     .catch(e=>alert('Error: '+e.message))
     .finally(()=>{btn.textContent='⬇ PDF resumen';btn.disabled=false;});

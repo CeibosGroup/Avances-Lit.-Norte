@@ -85,14 +85,13 @@
   <a href="index.html">←</a>
   <h1>Siembra Invierno 2026</h1>
   <span class="week" id="week-label"></span>
+  <button id="pdf-btn-siembra" onclick="generarPDFSiembra()" style="background:rgba(255,255,255,0.15);color:#fff;border:0.5px solid rgba(255,255,255,0.4);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">⬇ PDF</button>
 </div>
 <div class="wrapper">
   <div id="error-box" class="error" style="display:none"></div>
   <div id="loading" class="loading">Cargando datos...</div>
   <div id="content" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-    <button id="pdf-btn-siembra" onclick="generarPDFSiembra()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;background:rgba(46,92,30,0.1);color:#2E5C1E;border:0.5px solid rgba(46,92,30,0.3);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">⬇ PDF</button>
-  </div>
+    
     <div class="kpi-row" id="kpis"></div>
     <div class="donut-card" id="donut-card"></div>
     <div id="blocks"></div>
@@ -304,114 +303,155 @@ fetch(XLSX_URL+'?t='+Date.now())
   });
 </script>
 
+
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 function generarPDFSiembra(){
-  const btn = document.getElementById('pdf-btn-siembra');
-  btn.textContent = '...'; btn.disabled = true;
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-    const W = 210, margin = 14, colW = W - margin*2;
-    let y = 14;
-    const fecha = new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const btn=document.getElementById('pdf-btn-siembra');
+  btn.textContent='...';btn.disabled=true;
+  try{
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,M=14,CW=W-M*2;
+    let y=14;
+    const fecha=new Date().toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit',year:'numeric'});
 
     // Header
-    doc.setFillColor(46,92,30);
-    doc.rect(0,0,W,18,'F');
+    doc.setFillColor(46,92,30);doc.rect(0,0,W,20,'F');
     doc.setTextColor(255,255,255);
-    doc.setFontSize(13); doc.setFont('helvetica','bold');
-    doc.text('Siembra Invierno 2026 — Litoral Norte', margin, 12);
-    doc.setFontSize(9); doc.setFont('helvetica','normal');
-    doc.text(fecha, W-margin, 12, {align:'right'});
-    y = 26;
+    doc.setFontSize(14);doc.setFont('helvetica','bold');
+    doc.text('Siembra Invierno 2026 — Litoral Norte',M,9);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text('Ceibos Group Uruguay',M,15);
+    doc.text('Actualización: '+fecha,W-M,15,{align:'right'});
+    y=26;
 
     // KPIs from DOM
-    const kpisEl = document.getElementById('kpis');
-    const kpis = kpisEl ? kpisEl.querySelectorAll('.kpi') : [];
-    const bw = colW/4;
+    const kpisEl=document.getElementById('kpis');
+    const kpis=Array.from(kpisEl?.querySelectorAll('.kpi')||[]);
+    const bw=CW/4;
     kpis.forEach((k,i)=>{
-      const lbl = k.querySelector('.kpi-label')?.textContent?.trim()||'';
-      const val = k.querySelector('.kpi-val')?.childNodes[0]?.textContent?.trim()||'—';
-      const sub = k.querySelector('.kpi-sub')?.textContent?.trim()||'';
-      const x = margin + i*bw;
-      doc.setFillColor(245,245,240);
-      doc.roundedRect(x, y, bw-2, 18, 2, 2, 'F');
-      doc.setTextColor(100,100,100); doc.setFontSize(7); doc.setFont('helvetica','normal');
-      doc.text(lbl, x+3, y+5);
-      doc.setTextColor(20,20,20); doc.setFontSize(13); doc.setFont('helvetica','bold');
-      doc.text(val, x+3, y+13);
-      doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100);
-      doc.text(sub, x+3, y+17);
+      const lbl=k.querySelector('.kpi-label')?.textContent?.trim()||'';
+      // val: first text node only (exclude badge span)
+      const valEl=k.querySelector('.kpi-val');
+      const val=valEl?.childNodes[0]?.textContent?.trim()||'—';
+      const badge=valEl?.querySelector('span')?.textContent?.replace(/[▲▼]/g,'').trim()||'';
+      const sub=k.querySelector('.kpi-sub')?.textContent?.trim()||'';
+      const x=M+i*bw;
+      doc.setFillColor(235,245,232);doc.roundedRect(x,y,bw-2,22,2,2,'F');
+      doc.setFillColor(46,92,30);doc.roundedRect(x,y,3,22,1,1,'F');
+      doc.setTextColor(80,80,80);doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text(lbl,x+5,y+6);
+      doc.setTextColor(20,20,20);doc.setFontSize(14);doc.setFont('helvetica','bold');
+      doc.text(val,x+5,y+15);
+      if(badge){
+        const bColor=badge.startsWith('+')?[46,92,30]:[192,0,0];
+        doc.setTextColor(...bColor);doc.setFontSize(8);doc.setFont('helvetica','bold');
+        doc.text(badge,x+bw-5,y+15,{align:'right'});
+      }
+      doc.setTextColor(80,80,80);doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text(sub,x+5,y+20);
     });
-    y += 24;
+    y+=28;
 
-    // Tabla por cultivo → campo
-    const blocks = document.getElementById('blocks');
+    // Cultivo blocks from DOM
+    const blocks=document.getElementById('blocks');
     if(blocks){
-      const cultCards = blocks.querySelectorAll('.card');
-      cultCards.forEach(card=>{
-        const cultName = card.querySelector('.pill')?.textContent?.trim()||'';
-        const cultPct  = card.querySelector('.cult-pct')?.textContent?.trim()||'';
-        const cultMeta = card.querySelector('.cult-meta')?.textContent?.trim()||'';
+      blocks.querySelectorAll('.card').forEach(card=>{
+        const cultName=card.querySelector('.pill')?.textContent?.trim()||'';
+        const cultPct=card.querySelector('.cult-pct')?.textContent?.trim()||'';
+        const cultMetaRaw=card.querySelector('.cult-meta')?.textContent||'';
+        // Parse "618 / 1.226 ha" and optional resiembra
+        const haMatch=cultMetaRaw.match(/([\d.,]+)\s*\/\s*([\d.,]+)\s*ha/);
+        const sembStr=haMatch?haMatch[1]:'—';
+        const totStr=haMatch?haMatch[2]:'—';
+        const riesgoMatch=cultMetaRaw.match(/−([\d.,]+)\s*ha resiembra/);
+        const riesgoStr=riesgoMatch?riesgoMatch[1]:null;
+        // Sembrado bruto = efec + riesgo
+        const efecNum=parseFloat(sembStr.replace(/\./g,'').replace(',','.'))||0;
+        const riesgoNum=riesgoStr?parseFloat(riesgoStr.replace(/\./g,'').replace(',','.'))||0:0;
+        const totNum=parseFloat(totStr.replace(/\./g,'').replace(',','.'))||0;
+        const sembBrutoNum=efecNum+riesgoNum;
+        const pctBruto=totNum>0?Math.round(sembBrutoNum/totNum*100):0;
+        const pctEfec=totNum>0?Math.round(efecNum/totNum*100):0;
 
         // Section header
-        doc.setFillColor(46,92,30);
-        doc.roundedRect(margin, y, colW, 8, 1, 1, 'F');
-        doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
-        doc.text(cultName+' — '+cultPct, margin+3, y+5.5);
-        doc.setFontSize(7); doc.setFont('helvetica','normal');
-        doc.text(cultMeta.replace(/[▲▼]/g,'').trim(), W-margin-2, y+5.5, {align:'right'});
-        y += 10;
+        doc.setFillColor(46,92,30);doc.roundedRect(M,y,CW,10,2,2,'F');
+        doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont('helvetica','bold');
+        doc.text(cultName,M+4,y+7);
+        doc.setFontSize(9);doc.setFont('helvetica','normal');
+        // Show: "50% efectivo (61% sembrado, 11% resiembra)"
+        let pctInfo=cultPct;
+        if(riesgoNum>0) pctInfo=pctEfec+'% efectivo  ('+pctBruto+'% sembrado · '+Math.round(riesgoNum/totNum*100)+'% resiembra)';
+        doc.text(pctInfo,W-M-2,y+7,{align:'right'});
+        y+=13;
 
-        // Column headers
-        const tcols = [
-          {t:'Campo', x:margin+2, w:50},
-          {t:'Ha', x:margin+54, w:20, r:true},
-          {t:'Sembradas', x:margin+76, w:26, r:true},
-          {t:'Avance', x:margin+104, w:20, r:true},
-          {t:'Variedad', x:margin+126, w:56},
+        // Col headers
+        const cols=[
+          {t:'Campo',x:M+2,r:false,w:50},
+          {t:'Ha',x:M+55,r:true,w:18},
+          {t:'Sembradas brutas',x:M+96,r:true,w:0},
+          {t:'En resiembra',x:M+124,r:true,w:0},
+          {t:'Efectivas',x:M+148,r:true,w:0},
+          {t:'Avance',x:M+CW,r:true,w:0},
         ];
-        doc.setFillColor(220,235,220);
-        doc.rect(margin, y, colW, 6, 'F');
-        doc.setTextColor(46,92,30); doc.setFontSize(7); doc.setFont('helvetica','bold');
-        tcols.forEach(col=>doc.text(col.t, col.r?col.x+col.w:col.x, y+4.5, col.r?{align:'right'}:{}));
-        y += 7;
+        doc.setFillColor(215,235,210);doc.rect(M,y,CW,6,'F');
+        doc.setTextColor(46,92,30);doc.setFontSize(7);doc.setFont('helvetica','bold');
+        cols.forEach(col=>doc.text(col.t,col.r?col.x:col.x,y+4.5,col.r?{align:'right'}:{}));
+        y+=7;
 
-        // Campo rows from table cells
-        const campoRows = card.querySelectorAll('tbody tr');
-        let row=0;
-        campoRows.forEach(tr=>{
-          const tds = tr.querySelectorAll('td');
-          if(tds.length < 4) return;
-          const campo  = tds[0]?.textContent?.replace('⚠','').trim()||'';
-          const ha     = tds[1]?.textContent?.trim()||'—';
-          const semb   = tds[2]?.textContent?.replace(/[()]/g,'').trim()||'—';
-          const avPct  = tds[3]?.textContent?.replace(/[^0-9%]/g,'').trim()||'—';
-          const variedad = tds[4]?.textContent?.trim()||'—';
+        // Campo rows from table
+        let rowN=0;
+        card.querySelectorAll('tbody tr').forEach(tr=>{
+          const tds=tr.querySelectorAll('td');
+          if(tds.length<4)return;
+          const campoRaw=tds[0]?.textContent?.replace('⚠','').trim()||'';
+          const haRaw=tds[1]?.textContent?.trim()||'—';
+          const sembRaw=tds[2]?.textContent?.trim()||'—';
+          const pctRaw=tds[3]?.textContent?.replace(/[^0-9%]/g,'').trim()||'—';
 
-          const bg = row%2===0?[255,255,255]:[248,248,245];
-          doc.setFillColor(...bg); doc.rect(margin, y, colW, 6, 'F');
-          doc.setTextColor(20,20,20); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-          doc.text(campo,   margin+2,  y+4.5);
-          doc.text(ha,      margin+74, y+4.5, {align:'right'});
-          doc.text(semb,    margin+102,y+4.5, {align:'right'});
-          doc.text(avPct,   margin+124,y+4.5, {align:'right'});
-          doc.text(variedad,margin+128,y+4.5);
-          y += 6; row++;
-          if(y > 270){ doc.addPage(); y=14; }
+          // Parse sembradas: "618 (+139 riesgo)" → bruto=618+139, riesgo=139, efec=618
+          const sembNum=parseFloat(sembRaw.replace(/\./g,'').replace(',','.'))||0;
+          const riesgoRowMatch=tds[2]?.textContent?.match(/\(.*?([\d.,]+)\s*riesgo\)/);
+          const riesgoRow=riesgoRowMatch?parseFloat(riesgoRowMatch[1].replace(/\./g,'').replace(',','.'))||0:0;
+          const efecRow=sembNum;
+          const brutoRow=efecRow+riesgoRow;
+          const haNum=parseFloat(haRaw.replace(/\./g,'').replace(',','.'))||0;
+          const pctEfecRow=haNum>0?Math.round(efecRow/haNum*100):0;
+
+          const bg=rowN%2===0?[255,255,255]:[246,250,244];
+          doc.setFillColor(...bg);doc.rect(M,y,CW,7,'F');
+          doc.setTextColor(20,20,20);doc.setFontSize(8);doc.setFont('helvetica','normal');
+          doc.text(campoRaw,M+2,y+5);
+          doc.text(haRaw,M+73,y+5,{align:'right'});
+
+          if(riesgoRow>0){
+            doc.text(brutoRow.toLocaleString('es-UY',{maximumFractionDigits:0}),M+96,y+5,{align:'right'});
+            doc.setTextColor(192,0,0);doc.setFont('helvetica','bold');
+            doc.text(riesgoRow.toLocaleString('es-UY',{maximumFractionDigits:0}),M+124,y+5,{align:'right'});
+            doc.setTextColor(20,20,20);doc.setFont('helvetica','normal');
+            doc.text(efecRow.toLocaleString('es-UY',{maximumFractionDigits:0}),M+148,y+5,{align:'right'});
+            doc.text(pctEfecRow+'%',M+CW,y+5,{align:'right'});
+          } else {
+            doc.text(sembNum>0?sembNum.toLocaleString('es-UY',{maximumFractionDigits:0}):'—',M+96,y+5,{align:'right'});
+            doc.text('—',M+124,y+5,{align:'right'});
+            doc.text(sembNum>0?sembNum.toLocaleString('es-UY',{maximumFractionDigits:0}):'—',M+148,y+5,{align:'right'});
+            doc.text(pctRaw,M+CW,y+5,{align:'right'});
+          }
+          y+=7;rowN++;
+          if(y>272){doc.addPage();y=14;}
         });
-        y += 4;
-        if(y > 270){ doc.addPage(); y=14; }
+        y+=5;
+        if(y>270){doc.addPage();y=14;}
       });
     }
 
     // Footer
-    doc.setTextColor(150,150,150); doc.setFontSize(7);
-    doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha, W/2, 290, {align:'center'});
+    doc.setTextColor(150,150,150);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('Ceibos Group Uruguay · Litoral Norte · '+fecha,W/2,290,{align:'center'});
     doc.save('Siembra_LitoralNorte_'+fecha.replace(/\//g,'-')+'.pdf');
-  } catch(e) { alert('Error generando PDF: '+e.message); }
-  btn.textContent = '⬇ PDF'; btn.disabled = false;
+  }catch(e){alert('Error: '+e.message+'\n'+e.stack);}
+  btn.textContent='⬇ PDF';btn.disabled=false;
 }
 </script>
 </body>
