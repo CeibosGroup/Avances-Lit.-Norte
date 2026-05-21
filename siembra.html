@@ -218,7 +218,7 @@ fetch(XLSX_URL+'?t='+Date.now())
       const ha=parseFloat(r[SC.ha])||0;
       const sembradas=parseFloat(r[SC.sembradas])||0;
       const key=`${campo}|${lote}|${cult}`;
-      const riesgo=RESIEMBRA[key]||0;
+      const riesgo=parseFloat(r[SC.resembradas])||0;
       let fsiem=r[SC.fsiem];
       if(fsiem instanceof Date){fsiem=fsiem.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit'});}
       else if(typeof fsiem==='number'){const d=new Date(Math.round((fsiem-25569)*86400*1000));fsiem=d.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit'});}
