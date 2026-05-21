@@ -146,8 +146,9 @@ function buildSiembraBlock(cultCode, campos){
   const totalEfec  = totalSemb-totalRiesgo;
   const pctEfec    = totalHa>0?totalEfec/totalHa:0;
   const pctRiesgo  = totalHa>0?totalRiesgo/totalHa:0;
+  const pctResemb  = pctRiesgo;
   const cultId     = 'cult-'+cultCode.toLowerCase();
-  const riesgoStr  = totalRiesgo>0?` &nbsp;<span class="neg" style="font-size:11px">−${fmt(totalRiesgo)} ha resiembra</span>`:'';
+  const riesgoStr  = totalRiesgo>0?` <span style="font-size:10px;background:#FEF3CD;color:#92600A;border-radius:4px;padding:1px 5px;font-weight:500;">↺ ${fmt(totalRiesgo)} ha re-siembra</span>`:'';
 
   const block=document.createElement('div');
   block.className='card';
@@ -161,7 +162,7 @@ function buildSiembraBlock(cultCode, campos){
       <span class="cult-pct">${Math.round(pctEfec*100)}%</span>
       <span class="chev" id="chev-${cultId}">▶</span>
     </div>
-    <div class="cult-meta">${fmt(totalEfec)} ha efectivas / ${fmt(totalHa)} ha${resembNota}</div>
+    <div class="cult-meta">${fmt(totalEfec)} ha efectivas / ${fmt(totalHa)} ha ${riesgoStr}</div>
     <div class="campo-list" id="${cultId}">
       <table>
         <thead><tr>
