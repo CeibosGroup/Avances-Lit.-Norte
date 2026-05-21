@@ -233,7 +233,7 @@ function generarPDFResumen(){
       // ══════════════════════════════
       // SIEMBRA
       // ══════════════════════════════
-      const RIESGO={'San Luis|Cz':138.88};
+      // Resiembra leída de col 10 (ha Resembradas)
       const wsSiem=wb.Sheets['Avance de siembra'];
       const rowsSiem=wsSiem?X.utils.sheet_to_json(wsSiem,{header:1,defval:null}):[];
       const siemMap={};
@@ -243,9 +243,10 @@ function generarPDFResumen(){
         const cult=String(r[3]||'').trim();
         if(!['Cz','Tr','Ceb'].includes(cult))continue;
         const k=r[0]+'||'+cult;
-        if(!siemMap[k])siemMap[k]={campo:r[0],cult,ha:0,semb:0};
+        if(!siemMap[k])siemMap[k]={campo:r[0],cult,ha:0,semb:0,resemb:0};
         siemMap[k].ha+=parseFloat(r[2])||0;
         siemMap[k].semb+=parseFloat(r[4])||0;
+        siemMap[k].resemb+=parseFloat(r[10])||0;
       }
       const cultLabel={'Cz':'Colza','Tr':'Trigo','Ceb':'Cebada'};
       const cultColor={'Cz':[46,92,30],'Tr':[31,78,121],'Ceb':[180,80,20]};
@@ -254,8 +255,7 @@ function generarPDFResumen(){
         return (ord[a.cult]??9)-(ord[b.cult]??9)||a.campo.localeCompare(b.campo);
       });
       siemRows.forEach(s=>{
-        const rk=s.campo+'|'+s.cult;
-        s.riesgo=RIESGO[rk]||0;
+        s.riesgo=s.resemb;
         s.efec=Math.max(0,s.semb-s.riesgo);
       });
       const tS={ha:0,semb:0,riesgo:0,efec:0};

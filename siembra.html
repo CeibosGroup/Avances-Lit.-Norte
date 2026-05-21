@@ -53,10 +53,10 @@
   .pill-ceb { background: #FCE4D6; color: #843C0C; }
   .bar-track { flex: 1; height: 10px; background: #e8e8e4; border-radius: 3px; overflow: hidden; display: flex; }
   .bar-fill  { height: 100%; }
-  .bar-ok-cz  { background: #2E5C1E; border-radius: 3px; }
-  .bar-ok-tr  { background: #2E75B6; border-radius: 3px; }
-  .bar-ok-ceb { background: #ED7D31; border-radius: 3px; }
-  .bar-risk   { background: #C00000; opacity: 0.75; }
+  .bar-ok-cz  { background: #2E5C1E; }
+  .bar-ok-tr  { background: #2E75B6; }
+  .bar-ok-ceb { background: #ED7D31; }
+  .bar-resemb { background: #F5A623; opacity: 0.85; }
   .cult-pct { font-size: 15px; font-weight: 500; white-space: nowrap; }
   .chev { font-size: 12px; color: #aaa; transition: transform 0.2s; flex-shrink: 0; }
   .chev.open { transform: rotate(90deg); }
@@ -73,7 +73,7 @@
   tr:last-child td { border-bottom: none; }
   .lmini { width: 44px; height: 5px; background: #e8e8e4; border-radius: 2px; overflow: hidden; display: inline-flex; vertical-align: middle; margin-right: 3px; }
   .lmini-inner { height: 100%; }
-  .risk-badge { font-size: 10px; background: #FFEAEA; color: #C00000; border-radius: 4px; padding: 1px 5px; font-weight: 500; margin-left: 4px; }
+  .risk-badge { font-size: 10px; background: #FEF3CD; color: #92600A; border-radius: 4px; padding: 1px 5px; font-weight: 500; margin-left: 4px; }
   .neg { color: #C00000; }
   .muted { color: #999; font-style: italic; }
   .loading { text-align: center; padding: 3rem 1rem; color: #6b6b6b; font-size: 14px; }
@@ -101,12 +101,9 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const XLSX_URL = 'avance.xlsx';
-const SC = { campo:0, lote:1, ha:2, cult:3, sembradas:4, fsiem:7, variedad:9 };
+const SC = { campo:0, lote:1, ha:2, cult:3, sembradas:4, fsiem:7, variedad:9, resembradas:10 };
 
-// Resiembra: 'Campo|Lote|Cult' → ha en riesgo
-const RESIEMBRA = {
-  'San Luis|1|Cz': 138.88
-};
+// Resiembra: leída dinámicamente de columna 'ha Resembradas' (col 10) del xlsx
 
 const CULT_CFG = {
   'Cz':  { label:'Colza',  pill:'pill-cz',  barOk:'bar-ok-cz',  color:'#2E5C1E' },
@@ -159,12 +156,12 @@ function buildSiembraBlock(cultCode, campos){
       <span class="pill ${cfg.pill}">${cfg.label}</span>
       <div class="bar-track">
         <div class="bar-fill ${cfg.barOk}" style="width:${Math.round(pctEfec*100)}%"></div>
-        ${totalRiesgo>0?`<div class="bar-fill bar-risk" style="width:${Math.round(pctRiesgo*100)}%"></div>`:''}
+        ${totalRiesgo>0?`<div class="bar-fill bar-resemb" style="width:${Math.round(pctResemb*100)}%"></div>`:''}
       </div>
       <span class="cult-pct">${Math.round(pctEfec*100)}%</span>
       <span class="chev" id="chev-${cultId}">▶</span>
     </div>
-    <div class="cult-meta">${fmt(totalEfec)} / ${fmt(totalHa)} ha${riesgoStr}</div>
+    <div class="cult-meta">${fmt(totalEfec)} ha efectivas / ${fmt(totalHa)} ha${resembNota}</div>
     <div class="campo-list" id="${cultId}">
       <table>
         <thead><tr>
@@ -179,21 +176,23 @@ function buildSiembraBlock(cultCode, campos){
           const cSemb  = c.lotes.reduce((s,l)=>s+(l.sembradas||0),0);
           const cRiesg = c.lotes.reduce((s,l)=>s+(l.riesgo||0),0);
           const cEfec  = cSemb-cRiesg;
+          const cSemb2 = cSemb; // total sembrado bruto
           const cPct   = cHa>0?Math.round(cEfec/cHa*100):0;
           const cPctR  = cHa>0?Math.round(cRiesg/cHa*100):0;
           const varList=[...new Set(c.lotes.map(l=>l.variedad).filter(Boolean))].join(', ')||'—';
-          const rBadge = cRiesg>0?`<span class="risk-badge">⚠</span>`:'';
+          const rBadge = cRiesg>0?`<span class="risk-badge">↺ ${fmt(cRiesg,0)} ha re-siembra</span>`:'';
+          const cPctResemb = cHa>0?Math.round(cRiesg/cHa*100):0;
           return `<tr>
-            <td>${c.nombre}${rBadge}</td>
+            <td>${c.nombre} ${rBadge}</td>
             <td class="r">${fmt(cHa,0)}</td>
-            <td class="r">${cEfec>0?fmt(cEfec,0):'<span class="muted">—</span>'}${cRiesg>0?`<span class="neg" style="font-size:10px"> (−${fmt(cRiesg,0)})</span>`:''}</td>
+            <td class="r">${cSemb>0?fmt(cSemb,0):'<span class="muted">—</span>'}</td>
+            <td class="r">${cEfec>0?fmt(cEfec,0):'<span class="muted">—</span>'}</td>
             <td>
               <div class="lmini">
-                <div class="lmini-inner ${cfg.barOk}" style="width:${cPct}%"></div>
-                ${cPctR>0?`<div class="lmini-inner bar-risk" style="width:${cPctR}%"></div>`:''}
+                <div class="lmini-inner ${cfg.barOk} mini-ok" style="width:${cPct}%"></div>
+                ${cPctResemb>0?`<div class="lmini-inner mini-resemb" style="width:${cPctResemb}%"></div>`:''}
               </div>${cPct}%
             </td>
-            <td style="font-size:11px;color:#6b6b6b">${varList}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>
@@ -224,7 +223,8 @@ fetch(XLSX_URL+'?t='+Date.now())
       if(fsiem instanceof Date){fsiem=fsiem.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit'});}
       else if(typeof fsiem==='number'){const d=new Date(Math.round((fsiem-25569)*86400*1000));fsiem=d.toLocaleDateString('es-UY',{day:'2-digit',month:'2-digit'});}
       else{fsiem=null;}
-      lotes.push({campo,lote,cultCode:String(cult).trim(),ha,sembradas,riesgo,variedad:r[SC.variedad]||null,fsiem});
+      const resembradas = parseFloat(r[SC.resembradas]) || 0;
+      lotes.push({campo,lote,cultCode:String(cult).trim(),ha,sembradas,riesgo:resembradas,variedad:r[SC.variedad]||null,fsiem});
     }
 
     function groupCult(code){
